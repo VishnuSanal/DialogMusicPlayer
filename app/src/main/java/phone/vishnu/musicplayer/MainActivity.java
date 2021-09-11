@@ -1,5 +1,7 @@
 package phone.vishnu.musicplayer;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.Bundle;
@@ -10,6 +12,7 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -25,6 +28,14 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         this.setFinishOnTouchOutside(false);
+
+        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+
+        if (activityManager != null) {
+            List<ActivityManager.AppTask> appTasks = activityManager.getAppTasks();
+            if (appTasks != null && appTasks.size() > 0)
+                appTasks.get(0).setExcludeFromRecents(true);
+        }
 
         seekBar = findViewById(R.id.seekBar);
         imageView = findViewById(R.id.imageView);
@@ -82,14 +93,34 @@ public class MainActivity extends AppCompatActivity {
         imageView.setOnClickListener(v -> {
 
             if (mediaPlayer.isPlaying()) {
-                mediaPlayer.pause();
-                imageView.setImageResource(R.drawable.ic_play);
+                pauseMediaPlayer();
             } else {
-                mediaPlayer.start();
-                imageView.setImageResource(R.drawable.ic_pause);
+                resumeMediaPlayer();
             }
 
         });
     }
 
+    private void pauseMediaPlayer() {
+        mediaPlayer.pause();
+        imageView.setImageResource(R.drawable.ic_play);
+    }
+
+    private void resumeMediaPlayer() {
+        mediaPlayer.start();
+        imageView.setImageResource(R.drawable.ic_pause);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        pauseMediaPlayer();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mediaPlayer.release();
+        finish();
+    }
 }
