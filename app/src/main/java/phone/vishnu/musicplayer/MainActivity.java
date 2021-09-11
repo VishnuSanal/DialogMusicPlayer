@@ -128,17 +128,4 @@ public class MainActivity extends AppCompatActivity {
         return minutes + ":" + secs;
 
     }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        pauseMediaPlayer();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        mediaPlayer.release();
-        finish();
-    }
 }
