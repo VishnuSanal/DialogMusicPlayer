@@ -3,6 +3,7 @@ package phone.vishnu.musicplayer;
 import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.Toast;
 
@@ -14,15 +15,19 @@ import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
-    private SeekBar seekBar;
     private MediaPlayer mediaPlayer;
+
+    private SeekBar seekBar;
+    private ImageView imageView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        this.setFinishOnTouchOutside(false);
 
         seekBar = findViewById(R.id.seekBar);
+        imageView = findViewById(R.id.imageView);
 
         final Intent intent = getIntent();
 
@@ -43,6 +48,8 @@ public class MainActivity extends AppCompatActivity {
             seekBar.setMax(mediaPlayer.getDuration());
 
             mediaPlayer.start();
+
+            imageView.setImageResource(R.drawable.ic_pause);
 
             new Timer().scheduleAtFixedRate(new TimerTask() {
                 @Override
@@ -71,5 +78,18 @@ public class MainActivity extends AppCompatActivity {
                     mediaPlayer.seekTo(progress);
             }
         });
+
+        imageView.setOnClickListener(v -> {
+
+            if (mediaPlayer.isPlaying()) {
+                mediaPlayer.pause();
+                imageView.setImageResource(R.drawable.ic_play);
+            } else {
+                mediaPlayer.start();
+                imageView.setImageResource(R.drawable.ic_pause);
+            }
+
+        });
     }
+
 }
