@@ -7,6 +7,7 @@ import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.widget.ImageView;
 import android.widget.SeekBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -57,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             seekBar.setMax(mediaPlayer.getDuration());
+            ((TextView) findViewById(R.id.durationTV)).setText(getTime(mediaPlayer.getDuration()));
 
             mediaPlayer.start();
 
@@ -85,8 +87,11 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (mediaPlayer != null && fromUser)
-                    mediaPlayer.seekTo(progress);
+                if (mediaPlayer != null)
+                    if (fromUser)
+                        mediaPlayer.seekTo(progress);
+                    else
+                        ((TextView) findViewById(R.id.progressTV)).setText(getTime(mediaPlayer.getCurrentPosition()));
             }
         });
 
@@ -109,6 +114,19 @@ public class MainActivity extends AppCompatActivity {
     private void resumeMediaPlayer() {
         mediaPlayer.start();
         imageView.setImageResource(R.drawable.ic_pause);
+    }
+
+    private String getTime(long millis) {
+
+        long minutes = (millis / 1000) / 60;
+        long seconds = (millis / 1000) % 60;
+
+        String secondsStr = Long.toString(seconds);
+
+        String secs = (secondsStr.length() >= 2) ? secondsStr.substring(0, 2) : "0" + secondsStr;
+
+        return minutes + ":" + secs;
+
     }
 
     @Override
