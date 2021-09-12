@@ -11,7 +11,6 @@ import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -129,9 +128,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
 
-            String path = intent.getData().getPath()
-                    .replace("/storage_root/", "")
-                    .replace("/external_files", Environment.getExternalStorageDirectory().getAbsolutePath());
+            String path = FileUtils.getFilePath(this, intent.getData());
 
             Log.e("vishnu", "initTasks:" + path);
 
