@@ -1,5 +1,5 @@
 # DialogMusicPlayer - A simple music player dialog :)
-The stock music player on my phone needed unnecesary permissions! So, I created one on my own :D
+The stock music player on my phone needed unnecessary permissions! So, I created one on my own :D
 
 # How it looks!
 
