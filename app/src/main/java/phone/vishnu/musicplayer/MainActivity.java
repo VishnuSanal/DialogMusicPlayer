@@ -11,8 +11,10 @@ import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
+import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.SeekBar;
@@ -127,7 +129,11 @@ public class MainActivity extends AppCompatActivity {
 
         if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
 
-            String path = intent.getData().getPath().replace("/storage_root/", "");
+            String path = intent.getData().getPath()
+                    .replace("/storage_root/", "")
+                    .replace("/external_files", Environment.getExternalStorageDirectory().getAbsolutePath());
+
+            Log.e("vishnu", "initTasks:" + path);
 
             mediaPlayer = new MediaPlayer();
 
@@ -135,8 +141,8 @@ public class MainActivity extends AppCompatActivity {
                 mediaPlayer.setDataSource(path);
                 mediaPlayer.prepare();
             } catch (IOException e) {
-                e.printStackTrace();
-                Toast.makeText(this, "Oops! Something went wrong", Toast.LENGTH_SHORT).show();
+                Log.e("vishnu", "initTasks -> Path: " + path, e);
+                Toast.makeText(this, "Oops! Something went wrong\n\n" + e.toString() + "\n\n" + "Path: " + path, Toast.LENGTH_LONG).show();
             }
 
             seekBar.setMax(mediaPlayer.getDuration());
@@ -258,7 +264,6 @@ public class MainActivity extends AppCompatActivity {
         );
 
     }
-
 
     public void enableScreenRotation() {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
