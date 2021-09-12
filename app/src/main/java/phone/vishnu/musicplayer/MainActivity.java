@@ -1,13 +1,17 @@
 package phone.vishnu.musicplayer;
 
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -34,6 +38,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         this.setFinishOnTouchOutside(false);
+
+        getWindow().setLayout(
+                (int) (getResources().getDisplayMetrics().widthPixels * 0.90),
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
 
         ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
@@ -68,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
             ((TextView) findViewById(R.id.durationTV)).setText(getTime(mediaPlayer.getDuration()));
 
             mediaPlayer.start();
+            disableScreenRotation();
 
             imageView.setImageResource(R.drawable.ic_pause);
 
@@ -142,11 +152,13 @@ public class MainActivity extends AppCompatActivity {
     private void pauseMediaPlayer() {
         mediaPlayer.pause();
         imageView.setImageResource(R.drawable.ic_play);
+        enableScreenRotation();
     }
 
     private void resumeMediaPlayer() {
         mediaPlayer.start();
         imageView.setImageResource(R.drawable.ic_pause);
+        disableScreenRotation();
     }
 
     private void quit() {
@@ -204,6 +216,22 @@ public class MainActivity extends AppCompatActivity {
 
     /*
     @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        outState.putInt("position", mediaPlayer.getCurrentPosition());
+        pauseMediaPlayer();
+        super.onSaveInstanceState(outState);
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        mediaPlayer.seekTo(savedInstanceState.getInt("position"));
+        resumeMediaPlayer();
+        super.onRestoreInstanceState(savedInstanceState);
+    }
+    */
+
+    /*
+    @Override
     protected void onPause() {
         super.onPause();
         pauseMediaPlayer();
@@ -216,5 +244,19 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
     */
+
+    @SuppressLint("SourceLockedOrientationActivity")
+    public void disableScreenRotation() {
+        int orientation = getResources().getConfiguration().orientation;
+
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE)
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
+        else if (orientation == Configuration.ORIENTATION_PORTRAIT)
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    }
+
+    public void enableScreenRotation() {
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+    }
 
 }

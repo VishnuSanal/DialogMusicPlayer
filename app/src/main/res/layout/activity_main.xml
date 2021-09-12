@@ -6,7 +6,6 @@
     android:layout_height="wrap_content"
     android:layout_gravity="center"
     android:foregroundGravity="center"
-    android:minWidth="500dp"
     app:cardCornerRadius="8dp"
     app:cardElevation="12dp"
     app:cardUseCompatPadding="true"
