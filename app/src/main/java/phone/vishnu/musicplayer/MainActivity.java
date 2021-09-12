@@ -3,8 +3,11 @@ package phone.vishnu.musicplayer;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.text.method.ScrollingMovementMethod;
 import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -24,6 +27,8 @@ public class MainActivity extends AppCompatActivity {
     private SeekBar seekBar;
     private ImageView imageView;
 
+    private TextView fileNameTV, artistNameTV;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -39,7 +44,9 @@ public class MainActivity extends AppCompatActivity {
         }
 
         seekBar = findViewById(R.id.seekBar);
-        imageView = findViewById(R.id.imageView);
+        imageView = findViewById(R.id.playPauseButton);
+        fileNameTV = findViewById(R.id.fileNameTV);
+        artistNameTV = findViewById(R.id.artistNameTV);
 
         final Intent intent = getIntent();
 
@@ -63,6 +70,9 @@ public class MainActivity extends AppCompatActivity {
             mediaPlayer.start();
 
             imageView.setImageResource(R.drawable.ic_pause);
+
+            setMetaData(path);
+            setScrollingBehaviour();
 
             new Timer().scheduleAtFixedRate(new TimerTask() {
                 @Override
@@ -104,6 +114,29 @@ public class MainActivity extends AppCompatActivity {
             }
 
         });
+
+        findViewById(R.id.quitTV).setOnClickListener(v -> MainActivity.this.quit());
+    }
+
+    private void setScrollingBehaviour() {
+
+        fileNameTV.setMovementMethod(new ScrollingMovementMethod());
+        artistNameTV.setMovementMethod(new ScrollingMovementMethod());
+
+        fileNameTV.setSingleLine(true);
+        fileNameTV.setHorizontallyScrolling(true);
+        fileNameTV.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+        fileNameTV.setMarqueeRepeatLimit(-1);
+        fileNameTV.setSelected(true);
+        fileNameTV.setPadding(10, 0, 10, 0);
+
+        artistNameTV.setSingleLine(true);
+        artistNameTV.setHorizontallyScrolling(true);
+        artistNameTV.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+        artistNameTV.setMarqueeRepeatLimit(-1);
+        artistNameTV.setSelected(true);
+        artistNameTV.setPadding(10, 0, 10, 0);
+
     }
 
     private void pauseMediaPlayer() {
@@ -114,6 +147,11 @@ public class MainActivity extends AppCompatActivity {
     private void resumeMediaPlayer() {
         mediaPlayer.start();
         imageView.setImageResource(R.drawable.ic_pause);
+    }
+
+    private void quit() {
+        mediaPlayer.release();
+        finish();
     }
 
     private String getTime(long millis) {
@@ -129,11 +167,39 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void setMetaData(String path) {
+
+        MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
+        mediaMetadataRetriever.setDataSource(path);
+
+        String title = null, artist = null;
+        try {
+            title = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
+            artist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        String[] split = path.split("/");
+
+        if (split.length == 0) split = new String[]{"<Unknown Title>"};
+
+        fileNameTV.setText
+                (title == null ?
+                        split[split.length - 1] :
+                        title);
+        artistNameTV.setText(
+                artist == null ?
+                        "<Unknown Artist>" :
+                        artist
+        );
+
+    }
+
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        mediaPlayer.release();
-        finish();
+        quit();
     }
 
     /*
