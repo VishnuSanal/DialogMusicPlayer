@@ -26,13 +26,12 @@
             android:paddingTop="8dp"
             android:paddingEnd="8dp"
             android:paddingBottom="4dp"
-            android:text="Music Player"
+            android:text="@string/music_player"
             android:textSize="16sp"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:ignore="HardcodedText" />
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/progressTV"
@@ -74,7 +73,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="?attr/selectableItemBackground"
-            android:contentDescription="Action Button"
+            android:contentDescription="@string/play_pause_button"
             android:paddingStart="8dp"
             android:paddingTop="8dp"
             android:paddingEnd="8dp"
@@ -83,8 +82,7 @@
             android:src="@drawable/ic_play"
             app:layout_constraintBottom_toTopOf="@id/quitTV"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/seekBar"
-            tools:ignore="HardcodedText" />
+            app:layout_constraintTop_toBottomOf="@id/seekBar" />
 
         <TextView
             android:id="@+id/fileNameTV"
@@ -101,8 +99,7 @@
             app:layout_constraintEnd_toStartOf="@id/playPauseButton"
             app:layout_constraintHorizontal_bias="0"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/seekBar"
-            tools:text="Love Yourself" />
+            app:layout_constraintTop_toBottomOf="@id/seekBar" />
 
         <TextView
             android:id="@+id/artistNameTV"
@@ -120,8 +117,7 @@
             app:layout_constraintEnd_toStartOf="@id/playPauseButton"
             app:layout_constraintHorizontal_bias="0"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/fileNameTV"
-            tools:text="Justin Bieber" />
+            app:layout_constraintTop_toBottomOf="@id/fileNameTV" />
 
         <TextView
             android:id="@+id/quitTV"
@@ -134,7 +130,7 @@
             android:paddingTop="4dp"
             android:paddingEnd="8dp"
             android:paddingBottom="8dp"
-            android:text="Quit"
+            android:text="@string/quit"
             android:textColor="@android:color/holo_red_light"
             android:textSize="16sp"
             android:textStyle="bold"
@@ -143,8 +139,7 @@
             app:layout_constraintHorizontal_bias="0.25"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/artistNameTV"
-            app:layout_constraintVertical_bias="1"
-            tools:ignore="HardcodedText" />
+            app:layout_constraintVertical_bias="1" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.cardview.widget.CardView>
