@@ -1,6 +1,5 @@
 package phone.vishnu.musicplayer;
 
-import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
@@ -39,60 +38,20 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         this.setFinishOnTouchOutside(false);
 
-        getWindow().setLayout(
-                (int) (getResources().getDisplayMetrics().widthPixels * 0.90),
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-
-        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-
-        if (activityManager != null) {
-            List<ActivityManager.AppTask> appTasks = activityManager.getAppTasks();
-            if (appTasks != null && appTasks.size() > 0)
-                appTasks.get(0).setExcludeFromRecents(true);
-        }
+        setScreenWidth();
+        disableRecentVisibility();
 
         seekBar = findViewById(R.id.seekBar);
         imageView = findViewById(R.id.playPauseButton);
         fileNameTV = findViewById(R.id.fileNameTV);
         artistNameTV = findViewById(R.id.artistNameTV);
 
-        final Intent intent = getIntent();
+        initTasks(getIntent());
 
-        if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
+        setListeners();
+    }
 
-            String path = intent.getData().getPath().replace("/storage_root/", "");
-
-            mediaPlayer = new MediaPlayer();
-
-            try {
-                mediaPlayer.setDataSource(path);
-                mediaPlayer.prepare();
-            } catch (IOException e) {
-                e.printStackTrace();
-                Toast.makeText(this, "Oops! Something went wrong\n\n" + e.toString(), Toast.LENGTH_SHORT).show();
-            }
-
-            seekBar.setMax(mediaPlayer.getDuration());
-            ((TextView) findViewById(R.id.durationTV)).setText(getTime(mediaPlayer.getDuration()));
-
-            mediaPlayer.start();
-            disableScreenRotation();
-
-            imageView.setImageResource(R.drawable.ic_pause);
-
-            setMetaData(path);
-            setScrollingBehaviour();
-
-            new Timer().scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    seekBar.setProgress(mediaPlayer.getCurrentPosition());
-                }
-            }, 0, 1);
-
-        }
-
+    private void setListeners() {
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
             @Override
@@ -111,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
                     if (fromUser)
                         mediaPlayer.seekTo(progress);
                     else
-                        ((TextView) findViewById(R.id.progressTV)).setText(getTime(mediaPlayer.getCurrentPosition()));
+                        ((TextView) findViewById(R.id.progressTV)).setText(getFormattedTime(mediaPlayer.getCurrentPosition()));
             }
         });
 
@@ -125,10 +84,63 @@ public class MainActivity extends AppCompatActivity {
 
         });
 
-        findViewById(R.id.quitTV).setOnClickListener(v -> MainActivity.this.quit());
+        findViewById(R.id.quitTV).setOnClickListener(v -> MainActivity.this.quitApp());
     }
 
-    private void setScrollingBehaviour() {
+    private void initTasks(Intent intent) {
+        if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
+
+            String path = intent.getData().getPath().replace("/storage_root/", "");
+
+            mediaPlayer = new MediaPlayer();
+
+            try {
+                mediaPlayer.setDataSource(path);
+                mediaPlayer.prepare();
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "Oops! Something went wrong\n\n" + e.toString(), Toast.LENGTH_SHORT).show();
+            }
+
+            seekBar.setMax(mediaPlayer.getDuration());
+            ((TextView) findViewById(R.id.durationTV)).setText(getFormattedTime(mediaPlayer.getDuration()));
+
+            mediaPlayer.start();
+            disableScreenRotation();
+
+            imageView.setImageResource(R.drawable.ic_pause);
+
+            populateMetaDataTextViews(path);
+            setTextViewScrollingBehaviour();
+
+            new Timer().scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    seekBar.setProgress(mediaPlayer.getCurrentPosition());
+                }
+            }, 0, 1);
+
+        }
+    }
+
+    private void disableRecentVisibility() {
+        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+
+        if (activityManager != null) {
+            List<ActivityManager.AppTask> appTasks = activityManager.getAppTasks();
+            if (appTasks != null && appTasks.size() > 0)
+                appTasks.get(0).setExcludeFromRecents(true);
+        }
+    }
+
+    private void setScreenWidth() {
+        getWindow().setLayout(
+                (int) (getResources().getDisplayMetrics().widthPixels * 0.90),
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+    }
+
+    private void setTextViewScrollingBehaviour() {
 
         fileNameTV.setMovementMethod(new ScrollingMovementMethod());
         artistNameTV.setMovementMethod(new ScrollingMovementMethod());
@@ -161,12 +173,12 @@ public class MainActivity extends AppCompatActivity {
         disableScreenRotation();
     }
 
-    private void quit() {
+    private void quitApp() {
         mediaPlayer.release();
         finish();
     }
 
-    private String getTime(long millis) {
+    private String getFormattedTime(long millis) {
 
         long minutes = (millis / 1000) / 60;
         long seconds = (millis / 1000) % 60;
@@ -179,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void setMetaData(String path) {
+    private void populateMetaDataTextViews(String path) {
 
         MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
         mediaMetadataRetriever.setDataSource(path);
@@ -211,41 +223,13 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         super.onBackPressed();
-        quit();
+        quitApp();
     }
 
-    /*
-    @Override
-    protected void onSaveInstanceState(Bundle outState) {
-        outState.putInt("position", mediaPlayer.getCurrentPosition());
-        pauseMediaPlayer();
-        super.onSaveInstanceState(outState);
+    public void enableScreenRotation() {
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
     }
 
-    @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        mediaPlayer.seekTo(savedInstanceState.getInt("position"));
-        resumeMediaPlayer();
-        super.onRestoreInstanceState(savedInstanceState);
-    }
-    */
-
-    /*
-    @Override
-    protected void onPause() {
-        super.onPause();
-        pauseMediaPlayer();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        mediaPlayer.release();
-        finish();
-    }
-    */
-
-    @SuppressLint("SourceLockedOrientationActivity")
     public void disableScreenRotation() {
         int orientation = getResources().getConfiguration().orientation;
 
@@ -253,10 +237,6 @@ public class MainActivity extends AppCompatActivity {
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         else if (orientation == Configuration.ORIENTATION_PORTRAIT)
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-    }
-
-    public void enableScreenRotation() {
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
     }
 
 }
