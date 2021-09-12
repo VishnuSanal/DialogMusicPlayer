@@ -8,14 +8,15 @@
         android:excludeFromRecents="true"
         android:icon="@color/white"
         android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
         android:roundIcon="@color/white"
         android:supportsRtl="true"
         android:theme="@style/Theme.BGDialog">
 
         <activity
             android:name=".MainActivity"
-            android:launchMode="singleTask"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTask">
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />

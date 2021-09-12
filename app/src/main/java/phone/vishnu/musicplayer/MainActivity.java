@@ -1,12 +1,15 @@
 package phone.vishnu.musicplayer;
 
+import android.Manifest;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
@@ -16,6 +19,7 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.IOException;
@@ -41,13 +45,43 @@ public class MainActivity extends AppCompatActivity {
         setScreenWidth();
         disableRecentVisibility();
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
+                initTasks(getIntent());
+            else
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        quitApp();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == 0) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                initTasks(getIntent());
+            else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                    if (shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                        Toast.makeText(this, "Storage permission denied\nPlease grant necessary permissions", Toast.LENGTH_LONG).show();
+                        requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
+                    } else {
+                        Toast.makeText(this, "Storage permission denied\nPlease grant permission from settings", Toast.LENGTH_LONG).show();
+                    }
+            }
+        }
+    }
+
+    private void initViews() {
         seekBar = findViewById(R.id.seekBar);
         imageView = findViewById(R.id.playPauseButton);
         fileNameTV = findViewById(R.id.fileNameTV);
         artistNameTV = findViewById(R.id.artistNameTV);
-
-        initTasks(getIntent());
-
         setListeners();
     }
 
@@ -88,6 +122,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initTasks(Intent intent) {
+
+        initViews();
+
         if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
 
             String path = intent.getData().getPath().replace("/storage_root/", "");
@@ -99,7 +136,7 @@ public class MainActivity extends AppCompatActivity {
                 mediaPlayer.prepare();
             } catch (IOException e) {
                 e.printStackTrace();
-                Toast.makeText(this, "Oops! Something went wrong\n\n" + e.toString(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Oops! Something went wrong", Toast.LENGTH_SHORT).show();
             }
 
             seekBar.setMax(mediaPlayer.getDuration());
@@ -193,13 +230,15 @@ public class MainActivity extends AppCompatActivity {
 
     private void populateMetaDataTextViews(String path) {
 
-        MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
-        mediaMetadataRetriever.setDataSource(path);
-
         String title = null, artist = null;
         try {
+
+            MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
+            mediaMetadataRetriever.setDataSource(path);
+
             title = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
             artist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -220,11 +259,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        quitApp();
-    }
 
     public void enableScreenRotation() {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
