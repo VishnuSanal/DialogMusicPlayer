@@ -1,4 +1,4 @@
-package phone.vishnu.musicplayer;
+package phone.vishnu.dialogmusicplayer;
 
 import android.Manifest;
 import android.app.ActivityManager;

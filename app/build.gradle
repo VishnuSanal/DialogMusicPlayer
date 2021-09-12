@@ -6,18 +6,19 @@ android {
     compileSdk 30
 
     defaultConfig {
-        applicationId "phone.vishnu.musicplayer"
+        applicationId "phone.vishnu.dialogmusicplayer"
         minSdk 21
         targetSdk 30
         versionCode 1
-        versionName "1.0"
+        versionName "1.0.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

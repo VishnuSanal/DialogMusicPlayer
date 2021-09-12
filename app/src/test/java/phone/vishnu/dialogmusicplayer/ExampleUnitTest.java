@@ -1,4 +1,4 @@
-package phone.vishnu.musicplayer;
+package phone.vishnu.dialogmusicplayer;
 
 import static org.junit.Assert.assertEquals;
 
