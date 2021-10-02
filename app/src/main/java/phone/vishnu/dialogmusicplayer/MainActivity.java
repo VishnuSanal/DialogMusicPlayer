@@ -31,6 +31,7 @@ import java.util.TimerTask;
 public class MainActivity extends AppCompatActivity {
 
     private MediaPlayer mediaPlayer;
+    private Timer progressTimer;
 
     private SeekBar seekBar;
     private ImageView imageView;
@@ -42,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         this.setFinishOnTouchOutside(false);
+        progressTimer = new Timer();
 
         setScreenWidth();
         disableRecentVisibility();
@@ -153,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
             populateMetaDataTextViews(path);
             setTextViewScrollingBehaviour();
 
-            new Timer().scheduleAtFixedRate(new TimerTask() {
+            progressTimer.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
                     seekBar.setProgress(mediaPlayer.getCurrentPosition());
@@ -214,7 +216,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void quitApp() {
-        mediaPlayer.release();
+        if (progressTimer != null) progressTimer.cancel();
+        mediaPlayer.stop();
         finish();
     }
 
@@ -272,7 +275,7 @@ public class MainActivity extends AppCompatActivity {
         if (orientation == Configuration.ORIENTATION_LANDSCAPE)
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         else if (orientation == Configuration.ORIENTATION_PORTRAIT)
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
     }
 
 }
