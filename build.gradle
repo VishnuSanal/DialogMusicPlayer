@@ -12,6 +12,34 @@ buildscript {
     }
 }
 
-task clean(type: Delete) {
-    delete rootProject.buildDir
+
+plugins {
+    id "com.diffplug.spotless" version "5.14.3"
+}
+
+
+spotless {
+    java {
+
+        licenseHeaderFile 'license-spotless'
+
+        importOrder('android', 'androidx', 'com', 'java', 'phone', '')
+
+        target 'app/src/**/*.java'
+
+        googleJavaFormat('1.7').aosp()
+
+        removeUnusedImports()
+
+        delete rootProject.buildDir
+    }
+
+    format 'xml',  {
+
+        target 'app/src/**/*.xml'
+
+        trimTrailingWhitespace()
+        indentWithTabs()
+
+    }
 }

@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="phone.vishnu.dialogmusicplayer">
+	package="phone.vishnu.dialogmusicplayer">
 
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
-    <application
-        android:excludeFromRecents="true"
-        android:label="@string/app_name"
-        android:requestLegacyExternalStorage="true"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.BGDialog">
+	<application
+		android:excludeFromRecents="true"
+		android:label="@string/app_name"
+		android:requestLegacyExternalStorage="true"
+		android:supportsRtl="true"
+		android:theme="@style/Theme.BGDialog">
 
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:launchMode="singleTask">
+		<activity
+			android:name=".MainActivity"
+			android:exported="true"
+			android:launchMode="singleTask">
 
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
+			<intent-filter>
+				<action android:name="android.intent.action.VIEW" />
 
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
+				<category android:name="android.intent.category.DEFAULT" />
+				<category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="file" />
-                <data android:mimeType="audio/*" />
+				<data android:scheme="file" />
+				<data android:mimeType="audio/*" />
 
-                <data android:scheme="content" />
-                <data android:mimeType="audio/*" />
-            </intent-filter>
+				<data android:scheme="content" />
+				<data android:mimeType="audio/*" />
+			</intent-filter>
 
 
-        </activity>
+		</activity>
 
-    </application>
+	</application>
 
 </manifest>

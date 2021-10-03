@@ -1,9 +1,9 @@
 <resources>
 
-    <string name="app_name">Dialog Music Player</string>
+	<string name="app_name">Dialog Music Player</string>
 
-    <string name="music_player">Music Player</string>
-    <string name="quit">Quit</string>
+	<string name="music_player">Music Player</string>
+	<string name="quit">Quit</string>
 
-    <string name="play_pause_button" translatable="false">Play Pause Button</string>
+	<string name="play_pause_button" translatable="false">Play Pause Button</string>
 </resources>

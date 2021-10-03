@@ -1,3 +1,22 @@
+/*
+ * Copyright (C) 2021 - 2021 Vishnu Sanal. T
+ *
+ * This file is part of DialogMusicPlayer.
+ *
+ * DialogMusicPlayer is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package phone.vishnu.dialogmusicplayer;
 
 import android.Manifest;
@@ -19,10 +38,8 @@ import android.widget.ImageView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Timer;
@@ -47,10 +64,9 @@ public class MainActivity extends AppCompatActivity {
         disableRecentVisibility();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
-                initTasks(getIntent());
-            else
-                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
+            else requestPermissions(new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
     }
 
     @Override
@@ -60,19 +76,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(
+            int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (requestCode == 0) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                initTasks(getIntent());
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
             else {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                    if (shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                        Toast.makeText(this, "Storage permission denied\nPlease grant necessary permissions", Toast.LENGTH_LONG).show();
-                        requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
+                    if (shouldShowRequestPermissionRationale(
+                            Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                        Toast.makeText(
+                                        this,
+                                        "Storage permission denied\nPlease grant necessary permissions",
+                                        Toast.LENGTH_LONG)
+                                .show();
+                        requestPermissions(
+                                new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
                     } else {
-                        Toast.makeText(this, "Storage permission denied\nPlease grant permission from settings", Toast.LENGTH_LONG).show();
+                        Toast.makeText(
+                                        this,
+                                        "Storage permission denied\nPlease grant permission from settings",
+                                        Toast.LENGTH_LONG)
+                                .show();
                     }
             }
         }
@@ -87,37 +113,34 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setListeners() {
-        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        seekBar.setOnSeekBarChangeListener(
+                new SeekBar.OnSeekBarChangeListener() {
 
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
+                    @Override
+                    public void onStopTrackingTouch(SeekBar seekBar) {}
 
-            }
+                    @Override
+                    public void onStartTrackingTouch(SeekBar seekBar) {}
 
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
+                    @Override
+                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                        if (mediaPlayer != null)
+                            if (fromUser) mediaPlayer.seekTo(progress);
+                            else
+                                ((TextView) findViewById(R.id.progressTV))
+                                        .setText(
+                                                getFormattedTime(mediaPlayer.getCurrentPosition()));
+                    }
+                });
 
-            }
-
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                if (mediaPlayer != null)
-                    if (fromUser)
-                        mediaPlayer.seekTo(progress);
-                    else
-                        ((TextView) findViewById(R.id.progressTV)).setText(getFormattedTime(mediaPlayer.getCurrentPosition()));
-            }
-        });
-
-        imageView.setOnClickListener(v -> {
-
-            if (mediaPlayer.isPlaying()) {
-                pauseMediaPlayer();
-            } else {
-                resumeMediaPlayer();
-            }
-
-        });
+        imageView.setOnClickListener(
+                v -> {
+                    if (mediaPlayer.isPlaying()) {
+                        pauseMediaPlayer();
+                    } else {
+                        resumeMediaPlayer();
+                    }
+                });
 
         findViewById(R.id.quitTV).setOnClickListener(v -> MainActivity.this.quitApp());
     }
@@ -139,11 +162,20 @@ public class MainActivity extends AppCompatActivity {
                 mediaPlayer.prepare();
             } catch (IOException e) {
                 Log.e("vishnu", "initTasks -> Path: " + path, e);
-                Toast.makeText(this, "Oops! Something went wrong\n\n" + e.toString() + "\n\n" + "Path: " + path, Toast.LENGTH_LONG).show();
+                Toast.makeText(
+                                this,
+                                "Oops! Something went wrong\n\n"
+                                        + e.toString()
+                                        + "\n\n"
+                                        + "Path: "
+                                        + path,
+                                Toast.LENGTH_LONG)
+                        .show();
             }
 
             seekBar.setMax(mediaPlayer.getDuration());
-            ((TextView) findViewById(R.id.durationTV)).setText(getFormattedTime(mediaPlayer.getDuration()));
+            ((TextView) findViewById(R.id.durationTV))
+                    .setText(getFormattedTime(mediaPlayer.getDuration()));
 
             mediaPlayer.start();
             disableScreenRotation();
@@ -153,18 +185,22 @@ public class MainActivity extends AppCompatActivity {
             populateMetaDataTextViews(path);
             setTextViewScrollingBehaviour();
 
-            new Timer().scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    seekBar.setProgress(mediaPlayer.getCurrentPosition());
-                }
-            }, 0, 1);
-
+            new Timer()
+                    .scheduleAtFixedRate(
+                            new TimerTask() {
+                                @Override
+                                public void run() {
+                                    seekBar.setProgress(mediaPlayer.getCurrentPosition());
+                                }
+                            },
+                            0,
+                            1);
         }
     }
 
     private void disableRecentVisibility() {
-        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager activityManager =
+                (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
 
         if (activityManager != null) {
             List<ActivityManager.AppTask> appTasks = activityManager.getAppTasks();
@@ -174,10 +210,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setScreenWidth() {
-        getWindow().setLayout(
-                (int) (getResources().getDisplayMetrics().widthPixels * 0.90),
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
+        getWindow()
+                .setLayout(
+                        (int) (getResources().getDisplayMetrics().widthPixels * 0.90),
+                        ViewGroup.LayoutParams.WRAP_CONTENT);
     }
 
     private void setTextViewScrollingBehaviour() {
@@ -198,7 +234,6 @@ public class MainActivity extends AppCompatActivity {
         artistNameTV.setMarqueeRepeatLimit(-1);
         artistNameTV.setSelected(true);
         artistNameTV.setPadding(10, 0, 10, 0);
-
     }
 
     private void pauseMediaPlayer() {
@@ -228,7 +263,6 @@ public class MainActivity extends AppCompatActivity {
         String secs = (secondsStr.length() >= 2) ? secondsStr.substring(0, 2) : "0" + secondsStr;
 
         return minutes + ":" + secs;
-
     }
 
     private void populateMetaDataTextViews(String path) {
@@ -239,8 +273,12 @@ public class MainActivity extends AppCompatActivity {
             MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
             mediaMetadataRetriever.setDataSource(path);
 
-            title = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE);
-            artist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST);
+            title =
+                    mediaMetadataRetriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_TITLE);
+            artist =
+                    mediaMetadataRetriever.extractMetadata(
+                            MediaMetadataRetriever.METADATA_KEY_ARTIST);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -248,18 +286,10 @@ public class MainActivity extends AppCompatActivity {
 
         String[] split = path.split("/");
 
-        if (split.length == 0) split = new String[]{"<Unknown Title>"};
+        if (split.length == 0) split = new String[] {"<Unknown Title>"};
 
-        fileNameTV.setText
-                (title == null ?
-                        split[split.length - 1] :
-                        title);
-        artistNameTV.setText(
-                artist == null ?
-                        "<Unknown Artist>" :
-                        artist
-        );
-
+        fileNameTV.setText(title == null ? split[split.length - 1] : title);
+        artistNameTV.setText(artist == null ? "<Unknown Artist>" : artist);
     }
 
     public void enableScreenRotation() {
@@ -274,5 +304,4 @@ public class MainActivity extends AppCompatActivity {
         else if (orientation == Configuration.ORIENTATION_PORTRAIT)
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     }
-
 }
