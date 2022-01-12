@@ -4,8 +4,12 @@
 	<color name="BGColor">#FFFFFF</color>
 	<color name="textColor">#000000</color>
 
-	<color name="accentColor">#E63946</color>
+	<color name="accentColor">#E8374B</color>
 
-	<color name="accentTextColor">#1D3557</color>
+	<color name="textColorLight">#434343</color>
+
+	<color name="sliderActiveColor">@color/accentColor</color>
+	<color name="sliderInactiveColor">#A1A1A1</color>
+	<color name="sliderHaloColor">#D0E8374B</color>
 
 </resources>

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-	<color name="BGColor">#17191D</color>
+	<color name="BGColor">#18191D</color>
 
 	<color name="textColor">#FFFFFF</color>
 
-	<color name="accentTextColor">#F1FAEE</color>
+	<color name="textColorLight">#E7E5E5</color>
 
 </resources>
