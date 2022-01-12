@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+	<color name="BGColor">#17191D</color>
+
+	<color name="textColor">#FFFFFF</color>
+
+	<color name="accentTextColor">#F1FAEE</color>
+
+</resources>

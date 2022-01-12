@@ -28,16 +28,18 @@ import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.slider.Slider;
 import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -46,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
 
     private MediaPlayer mediaPlayer;
 
-    private SeekBar seekBar;
+    private Slider slider;
     private ImageView imageView;
 
     private TextView fileNameTV, artistNameTV;
@@ -101,7 +103,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        seekBar = findViewById(R.id.seekBar);
+        slider = findViewById(R.id.slider);
         imageView = findViewById(R.id.playPauseButton);
         fileNameTV = findViewById(R.id.fileNameTV);
         artistNameTV = findViewById(R.id.artistNameTV);
@@ -109,25 +111,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setListeners() {
-        seekBar.setOnSeekBarChangeListener(
-                new SeekBar.OnSeekBarChangeListener() {
-
-                    @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {}
-
-                    @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {}
-
-                    @Override
-                    public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                        if (mediaPlayer != null)
-                            if (fromUser) mediaPlayer.seekTo(progress);
-                            else
-                                ((TextView) findViewById(R.id.progressTV))
-                                        .setText(
-                                                getFormattedTime(mediaPlayer.getCurrentPosition()));
-                    }
+        slider.addOnChangeListener(
+                (slider, value, fromUser) -> {
+                    if (mediaPlayer != null)
+                        if (fromUser) mediaPlayer.seekTo((int) value);
+                        else
+                            new Handler(Looper.getMainLooper())
+                                    .post(
+                                            () ->
+                                                    ((TextView) findViewById(R.id.progressTV))
+                                                            .setText(
+                                                                    getFormattedTime(
+                                                                            mediaPlayer
+                                                                                    .getCurrentPosition())));
                 });
+
+        slider.setLabelFormatter(value -> getFormattedTime((long) value));
 
         imageView.setOnClickListener(
                 v -> {
@@ -169,7 +168,9 @@ public class MainActivity extends AppCompatActivity {
                         .show();
             }
 
-            seekBar.setMax(mediaPlayer.getDuration());
+            slider.setValueFrom(0);
+            slider.setValueTo(mediaPlayer.getDuration());
+
             ((TextView) findViewById(R.id.durationTV))
                     .setText(getFormattedTime(mediaPlayer.getDuration()));
 
@@ -186,7 +187,7 @@ public class MainActivity extends AppCompatActivity {
                             new TimerTask() {
                                 @Override
                                 public void run() {
-                                    seekBar.setProgress(mediaPlayer.getCurrentPosition());
+                                    slider.setValue(mediaPlayer.getCurrentPosition());
                                 }
                             },
                             0,

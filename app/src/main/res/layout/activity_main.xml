@@ -6,6 +6,7 @@
 	android:layout_height="wrap_content"
 	android:layout_gravity="center"
 	android:foregroundGravity="center"
+	app:cardBackgroundColor="@color/BGColor"
 	app:cardCornerRadius="8dp"
 	app:cardElevation="12dp"
 	app:cardUseCompatPadding="true"
@@ -27,6 +28,7 @@
 			android:paddingEnd="8dp"
 			android:paddingBottom="4dp"
 			android:text="@string/music_player"
+			android:textColor="@color/accentTextColor"
 			android:textSize="16sp"
 			android:textStyle="bold"
 			app:layout_constraintEnd_toEndOf="parent"
@@ -39,9 +41,10 @@
 			android:layout_height="wrap_content"
 			android:layout_marginStart="8dp"
 			android:layout_marginEnd="8dp"
+			android:textColor="@color/textColor"
 			android:textSize="12sp"
-			app:layout_constraintBottom_toTopOf="@id/seekBar"
-			app:layout_constraintStart_toStartOf="@id/seekBar"
+			app:layout_constraintBottom_toTopOf="@id/slider"
+			app:layout_constraintStart_toStartOf="@id/slider"
 			app:layout_constraintTop_toBottomOf="@id/titleTV"
 			tools:text="00:00" />
 
@@ -51,14 +54,15 @@
 			android:layout_height="wrap_content"
 			android:layout_marginStart="8dp"
 			android:layout_marginEnd="8dp"
+			android:textColor="@color/textColor"
 			android:textSize="12sp"
-			app:layout_constraintBottom_toTopOf="@id/seekBar"
-			app:layout_constraintEnd_toEndOf="@id/seekBar"
+			app:layout_constraintBottom_toTopOf="@id/slider"
+			app:layout_constraintEnd_toEndOf="@id/slider"
 			app:layout_constraintTop_toBottomOf="@id/titleTV"
 			tools:text="00:00" />
 
-		<SeekBar
-			android:id="@+id/seekBar"
+		<com.google.android.material.slider.Slider
+			android:id="@+id/slider"
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:layout_marginStart="8dp"
@@ -66,7 +70,12 @@
 			android:layout_marginEnd="4dp"
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintStart_toStartOf="parent"
-			app:layout_constraintTop_toBottomOf="@id/titleTV" />
+			app:layout_constraintTop_toBottomOf="@id/titleTV"
+			app:thumbColor="@color/BGColor"
+			app:thumbElevation="2dp"
+			app:thumbStrokeColor="@color/accentColor"
+			app:thumbStrokeWidth="4dp"
+			app:trackColorActive="@color/accentColor" />
 
 		<ImageView
 			android:id="@+id/playPauseButton"
@@ -82,7 +91,8 @@
 			android:src="@drawable/ic_play"
 			app:layout_constraintBottom_toTopOf="@id/quitTV"
 			app:layout_constraintEnd_toEndOf="parent"
-			app:layout_constraintTop_toBottomOf="@id/seekBar" />
+			app:layout_constraintTop_toBottomOf="@id/slider"
+			app:tint="@color/accentColor" />
 
 		<TextView
 			android:id="@+id/fileNameTV"
@@ -94,12 +104,13 @@
 			android:layout_marginBottom="2dp"
 			android:maxLines="1"
 			android:scrollbars="horizontal"
+			android:textColor="@color/textColor"
 			android:textSize="14sp"
 			app:layout_constraintBottom_toTopOf="@id/artistNameTV"
 			app:layout_constraintEnd_toStartOf="@id/playPauseButton"
 			app:layout_constraintHorizontal_bias="0"
 			app:layout_constraintStart_toStartOf="parent"
-			app:layout_constraintTop_toBottomOf="@id/seekBar" />
+			app:layout_constraintTop_toBottomOf="@id/slider" />
 
 		<TextView
 			android:id="@+id/artistNameTV"
@@ -112,6 +123,7 @@
 			android:letterSpacing="0.1"
 			android:maxLines="1"
 			android:scrollbars="horizontal"
+			android:textColor="@color/textColor"
 			android:textSize="12sp"
 			app:layout_constraintBottom_toTopOf="@id/quitTV"
 			app:layout_constraintEnd_toStartOf="@id/playPauseButton"
@@ -131,7 +143,7 @@
 			android:paddingEnd="8dp"
 			android:paddingBottom="8dp"
 			android:text="@string/quit"
-			android:textColor="@android:color/holo_red_light"
+			android:textColor="@color/accentTextColor"
 			android:textSize="16sp"
 			android:textStyle="bold"
 			app:layout_constraintBottom_toBottomOf="parent"
