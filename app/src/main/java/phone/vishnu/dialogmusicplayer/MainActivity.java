@@ -41,8 +41,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.slider.Slider;
 import java.io.IOException;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -52,6 +50,9 @@ public class MainActivity extends AppCompatActivity {
     private ImageView imageView;
 
     private TextView fileNameTV, artistNameTV;
+
+    private Handler updateHandler;
+    private Runnable updateRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -126,6 +127,21 @@ public class MainActivity extends AppCompatActivity {
                                                                                     .getCurrentPosition())));
                 });
 
+        updateHandler = new Handler();
+        updateRunnable =
+                new Runnable() {
+
+                    @Override
+                    public void run() {
+
+                        slider.setValue(mediaPlayer.getCurrentPosition());
+                        ((TextView) findViewById(R.id.progressTV))
+                                .setText(getFormattedTime(mediaPlayer.getCurrentPosition()));
+
+                        updateHandler.postDelayed(this, 10);
+                    }
+                };
+
         slider.setLabelFormatter(value -> getFormattedTime((long) value));
 
         imageView.setOnClickListener(
@@ -175,23 +191,13 @@ public class MainActivity extends AppCompatActivity {
                     .setText(getFormattedTime(mediaPlayer.getDuration()));
 
             mediaPlayer.start();
+            updateHandler.postDelayed(updateRunnable, 0);
             disableScreenRotation();
 
             imageView.setImageResource(R.drawable.ic_pause);
 
             populateMetaDataTextViews(path);
             setTextViewScrollingBehaviour();
-
-            new Timer()
-                    .scheduleAtFixedRate(
-                            new TimerTask() {
-                                @Override
-                                public void run() {
-                                    slider.setValue(mediaPlayer.getCurrentPosition());
-                                }
-                            },
-                            0,
-                            1);
         }
     }
 
@@ -236,6 +242,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void quitApp() {
         mediaPlayer.release();
+        updateHandler.removeCallbacks(updateRunnable);
         finish();
     }
 
