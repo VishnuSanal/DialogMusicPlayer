@@ -69,11 +69,13 @@
 			android:layout_marginTop="32dp"
 			android:layout_marginEnd="4dp"
 			app:haloColor="@color/sliderHaloColor"
+			app:haloRadius="12dp"
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintStart_toStartOf="parent"
 			app:layout_constraintTop_toBottomOf="@id/titleTV"
 			app:thumbColor="@color/BGColor"
 			app:thumbElevation="2dp"
+			app:thumbRadius="8dp"
 			app:thumbStrokeColor="@color/accentColor"
 			app:thumbStrokeWidth="4dp"
 			app:trackColorActive="@color/sliderActiveColor"
@@ -81,19 +83,16 @@
 
 		<ImageView
 			android:id="@+id/playPauseButton"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
+			android:layout_width="36dp"
+			android:layout_height="36dp"
 			android:background="?attr/selectableItemBackground"
 			android:contentDescription="@string/play_pause_button"
-			android:paddingStart="8dp"
-			android:paddingTop="8dp"
-			android:paddingEnd="8dp"
-			android:paddingBottom="8dp"
+			android:padding="4dp"
 			android:scaleType="fitXY"
 			android:src="@drawable/ic_play"
-			app:layout_constraintBottom_toTopOf="@id/quitTV"
-			app:layout_constraintEnd_toEndOf="parent"
-			app:layout_constraintTop_toBottomOf="@id/slider"
+			app:layout_constraintBottom_toBottomOf="@id/artistNameTV"
+			app:layout_constraintEnd_toEndOf="@id/slider"
+			app:layout_constraintTop_toTopOf="@id/fileNameTV"
 			app:tint="@color/accentColor" />
 
 		<TextView
@@ -104,6 +103,7 @@
 			android:layout_marginTop="8dp"
 			android:layout_marginEnd="8dp"
 			android:layout_marginBottom="2dp"
+			android:fontFamily="@font/poppins"
 			android:maxLines="1"
 			android:scrollbars="horizontal"
 			android:textColor="@color/textColor"
@@ -111,7 +111,7 @@
 			app:layout_constraintBottom_toTopOf="@id/artistNameTV"
 			app:layout_constraintEnd_toStartOf="@id/playPauseButton"
 			app:layout_constraintHorizontal_bias="0"
-			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintStart_toStartOf="@id/slider"
 			app:layout_constraintTop_toBottomOf="@id/slider" />
 
 		<TextView
@@ -122,6 +122,7 @@
 			android:layout_marginTop="2dp"
 			android:layout_marginEnd="8dp"
 			android:layout_marginBottom="8dp"
+			android:fontFamily="@font/poppins"
 			android:letterSpacing="0.1"
 			android:maxLines="1"
 			android:scrollbars="horizontal"
@@ -130,7 +131,7 @@
 			app:layout_constraintBottom_toTopOf="@id/quitTV"
 			app:layout_constraintEnd_toStartOf="@id/playPauseButton"
 			app:layout_constraintHorizontal_bias="0"
-			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintStart_toStartOf="@id/slider"
 			app:layout_constraintTop_toBottomOf="@id/fileNameTV" />
 
 		<TextView
@@ -138,8 +139,8 @@
 			android:layout_width="0dp"
 			android:layout_height="wrap_content"
 			android:background="?attr/selectableItemBackground"
+			android:fontFamily="@font/poppins"
 			android:gravity="center"
-			android:letterSpacing="0.1"
 			android:paddingStart="8dp"
 			android:paddingTop="4dp"
 			android:paddingEnd="8dp"
