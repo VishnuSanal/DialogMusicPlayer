@@ -1,1 +1,2 @@
-Complete UI/UX overhaul
+- Complete UI/UX overhaul
+- Bug fixes
