@@ -29,7 +29,6 @@ import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Looper;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -114,31 +113,23 @@ public class MainActivity extends AppCompatActivity {
     private void setListeners() {
         slider.addOnChangeListener(
                 (slider, value, fromUser) -> {
-                    if (mediaPlayer != null)
-                        if (fromUser) mediaPlayer.seekTo((int) value);
-                        else
-                            new Handler(Looper.getMainLooper())
-                                    .post(
-                                            () ->
-                                                    ((TextView) findViewById(R.id.progressTV))
-                                                            .setText(
-                                                                    getFormattedTime(
-                                                                            mediaPlayer
-                                                                                    .getCurrentPosition())));
+                    if (mediaPlayer != null) if (fromUser) mediaPlayer.seekTo((int) value);
                 });
 
         updateHandler = new Handler();
         updateRunnable =
                 new Runnable() {
-
                     @Override
                     public void run() {
 
-                        slider.setValue(mediaPlayer.getCurrentPosition());
-                        ((TextView) findViewById(R.id.progressTV))
-                                .setText(getFormattedTime(mediaPlayer.getCurrentPosition()));
+                        if (mediaPlayer != null) {
+                            slider.setValue(mediaPlayer.getCurrentPosition());
 
-                        updateHandler.postDelayed(this, 10);
+                            ((TextView) findViewById(R.id.progressTV))
+                                    .setText(getFormattedTime(mediaPlayer.getCurrentPosition()));
+
+                            updateHandler.postDelayed(this, 10);
+                        }
                     }
                 };
 
@@ -241,8 +232,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void quitApp() {
-        mediaPlayer.release();
         updateHandler.removeCallbacks(updateRunnable);
+        mediaPlayer.release();
         finish();
     }
 
