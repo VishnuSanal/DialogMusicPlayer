@@ -1,1 +1,1 @@
-simple music player dialog
+A simple and  minimal music player dialog
