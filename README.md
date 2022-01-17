@@ -1,4 +1,4 @@
-# DialogMusicPlayer - A simple music player dialog :)
+# DialogMusicPlayer - A simple and minimal music player dialog :) 
 The stock music player on my phone needed unnecessary permissions! So, I created one on my own :D
 
 <p align="center">
