@@ -3,9 +3,9 @@ The stock music player on my phone needed unnecessary permissions! So, I created
 
 <p align="center">
   
-<a href='https://apt.izzysoft.de/fdroid/index/apk/phone.vishnu.dialogmusicplayer'>
-	<img alt='Get it on IzzyOnDroid' src='https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png' height="100px" />
-</a>
+<a href='https://f-droid.org/packages/phone.vishnu.dialogmusicplayer'>
+	<img alt='Get it on F-Droid' src='https://fdroid.gitlab.io/artwork/badge/get-it-on.svg' height="100px" />
+</a>	
   
 <a href="https://github.com/VishnuSanal/DialogMusicPlayer/releases/">
 	<img alt="Get it on Github" src="https://raw.githubusercontent.com/VishnuSanal/Quotes/master/Screenshots/get-it-on-github.svg" height="100px">
