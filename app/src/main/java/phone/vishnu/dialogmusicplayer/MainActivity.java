@@ -26,6 +26,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -58,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         this.setFinishOnTouchOutside(false);
+
+        FileUtils.clearApplicationData(getApplicationContext()); // fix for an old mistake ;_;
 
         setScreenWidth();
 
@@ -151,26 +154,22 @@ public class MainActivity extends AppCompatActivity {
 
         initViews();
 
-        if (Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
+        Uri uri = intent.getData();
 
-            String path = FileUtils.getFilePath(this, intent.getData());
+        if (Intent.ACTION_VIEW.equals(intent.getAction()) && uri != null) {
 
-            Log.e("vishnu", "initTasks:" + path);
+            Log.e("vishnu", "initTasks:" + uri);
 
             mediaPlayer = new MediaPlayer();
 
             try {
-                mediaPlayer.setDataSource(path);
+                mediaPlayer.setDataSource(this, uri);
                 mediaPlayer.prepare();
             } catch (IOException e) {
-                Log.e("vishnu", "initTasks -> Path: " + path, e);
+                Log.e("vishnu", "initTasks -> Uri: " + uri, e);
                 Toast.makeText(
                                 this,
-                                "Oops! Something went wrong\n\n"
-                                        + e.toString()
-                                        + "\n\n"
-                                        + "Path: "
-                                        + path,
+                                "Oops! Something went wrong\n\n" + e + "\n\n" + "Uri: " + uri,
                                 Toast.LENGTH_LONG)
                         .show();
             }
@@ -187,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
 
             imageView.setImageResource(R.drawable.ic_pause);
 
-            populateMetaDataTextViews(path);
+            populateMetaDataTextViews(uri);
             setTextViewScrollingBehaviour();
         }
     }
@@ -249,13 +248,15 @@ public class MainActivity extends AppCompatActivity {
         return minutes + ":" + secs;
     }
 
-    private void populateMetaDataTextViews(String path) {
+    private void populateMetaDataTextViews(Uri uri) {
 
         String title = null, artist = null;
+
         try {
 
+            // TODO FIXME
             MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
-            mediaMetadataRetriever.setDataSource(path);
+            mediaMetadataRetriever.setDataSource(uri.getEncodedPath());
 
             title =
                     mediaMetadataRetriever.extractMetadata(
@@ -268,7 +269,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        String[] split = path.split("/");
+        String[] split = uri.getLastPathSegment().split("/");
 
         if (split.length == 0) split = new String[] {"<Unknown Title>"};
 
