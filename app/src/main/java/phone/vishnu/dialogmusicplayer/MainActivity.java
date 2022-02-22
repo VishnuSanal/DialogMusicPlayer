@@ -254,9 +254,13 @@ public class MainActivity extends AppCompatActivity {
 
         try {
 
-            // TODO FIXME
             MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
-            mediaMetadataRetriever.setDataSource(uri.getEncodedPath());
+
+            String s = uri.getPath().replace(uri.getPath().split("/")[1], "");
+
+            Log.e("vishnu", "populateMetaDataTextViews: " + s);
+
+            mediaMetadataRetriever.setDataSource(s);
 
             title =
                     mediaMetadataRetriever.extractMetadata(
