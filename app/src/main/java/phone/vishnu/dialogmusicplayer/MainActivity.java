@@ -154,11 +154,24 @@ public class MainActivity extends AppCompatActivity {
 
         initViews();
 
-        Uri uri = intent.getData();
+        Log.e("vishnu", "initTasks Intent#getAction: " + intent.getAction());
 
-        if (Intent.ACTION_VIEW.equals(intent.getAction()) && uri != null) {
+        if (Intent.ACTION_VIEW.equals(intent.getAction())
+                || Intent.ACTION_SEND.equals(intent.getAction())) {
+
+            Uri uri =
+                    Intent.ACTION_VIEW.equals(intent.getAction())
+                            ? intent.getData()
+                            : (Uri) intent.getExtras().get(Intent.EXTRA_STREAM);
 
             Log.e("vishnu", "initTasks:" + uri);
+
+            if (uri == null)
+                Toast.makeText(
+                                this,
+                                "Oops! Something went wrong\n\n" + intent.getAction(),
+                                Toast.LENGTH_LONG)
+                        .show();
 
             mediaPlayer = new MediaPlayer();
 
