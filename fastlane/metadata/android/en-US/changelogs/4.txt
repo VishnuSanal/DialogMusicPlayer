@@ -1,0 +1,3 @@
+- Now supports Android's share to menu
+- Performance improvements
+- Bug fixes

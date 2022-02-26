@@ -1,2 +1,0 @@
-- Complete UI/UX overhaul
-- Bug fixes
