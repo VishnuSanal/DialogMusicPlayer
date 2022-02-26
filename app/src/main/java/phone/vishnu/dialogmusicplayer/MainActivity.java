@@ -24,7 +24,6 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
-import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Build;
@@ -199,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
 
             imageView.setImageResource(R.drawable.ic_pause);
 
-            populateMetaDataTextViews(uri);
+            populateMetaDataTextViews(uri, mediaPlayer.getDuration());
             setTextViewScrollingBehaviour();
         }
     }
@@ -261,37 +260,25 @@ public class MainActivity extends AppCompatActivity {
         return minutes + ":" + secs;
     }
 
-    private void populateMetaDataTextViews(Uri uri) {
-
-        String title = null, artist = null;
+    private void populateMetaDataTextViews(Uri uri, long millis) {
 
         try {
 
-            MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
+            Audio audio = AudioUtils.getMetaData(this, String.valueOf(millis), uri);
 
-            String s = uri.getPath().replace(uri.getPath().split("/")[1], "");
+            Log.e("vishnu", "populateMetaDataTextViews: " + audio);
 
-            Log.e("vishnu", "populateMetaDataTextViews: " + s);
-
-            mediaMetadataRetriever.setDataSource(s);
-
-            title =
-                    mediaMetadataRetriever.extractMetadata(
-                            MediaMetadataRetriever.METADATA_KEY_TITLE);
-            artist =
-                    mediaMetadataRetriever.extractMetadata(
-                            MediaMetadataRetriever.METADATA_KEY_ARTIST);
+            fileNameTV.setText(audio.getName());
+            artistNameTV.setText(audio.getArtist());
 
         } catch (Exception e) {
+            Log.e("vishnu", "populateMetaDataTextViews: " + e);
+
+            fileNameTV.setText("<Unknown Title>");
+            fileNameTV.setText("<Unknown Artist>");
+
             e.printStackTrace();
         }
-
-        String[] split = uri.getLastPathSegment().split("/");
-
-        if (split.length == 0) split = new String[] {"<Unknown Title>"};
-
-        fileNameTV.setText(title == null ? split[split.length - 1] : title);
-        artistNameTV.setText(artist == null ? "<Unknown Artist>" : artist);
     }
 
     public void enableScreenRotation() {
