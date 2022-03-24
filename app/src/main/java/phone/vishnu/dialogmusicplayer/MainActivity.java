@@ -48,10 +48,12 @@ public class MainActivity extends AppCompatActivity {
     private Slider slider;
     private ImageView imageView;
 
-    private TextView fileNameTV, artistNameTV;
+    private TextView fileNameTV, artistNameTV, progressTV, durationTV;
 
     private Handler updateHandler;
     private Runnable updateRunnable;
+
+    private boolean isTimeReversed = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,6 +111,8 @@ public class MainActivity extends AppCompatActivity {
         imageView = findViewById(R.id.playPauseButton);
         fileNameTV = findViewById(R.id.fileNameTV);
         artistNameTV = findViewById(R.id.artistNameTV);
+        progressTV = findViewById(R.id.progressTV);
+        durationTV = findViewById(R.id.durationTV);
         setListeners();
     }
 
@@ -127,15 +131,16 @@ public class MainActivity extends AppCompatActivity {
                         if (mediaPlayer != null) {
                             slider.setValue(mediaPlayer.getCurrentPosition());
 
-                            ((TextView) findViewById(R.id.progressTV))
-                                    .setText(getFormattedTime(mediaPlayer.getCurrentPosition()));
+                            progressTV.setText(
+                                    getFormattedTime(
+                                            mediaPlayer.getCurrentPosition(), isTimeReversed));
 
                             updateHandler.postDelayed(this, 10);
                         }
                     }
                 };
 
-        slider.setLabelFormatter(value -> getFormattedTime((long) value));
+        slider.setLabelFormatter(value -> getFormattedTime((long) value, isTimeReversed));
 
         imageView.setOnClickListener(
                 v -> {
@@ -145,6 +150,8 @@ public class MainActivity extends AppCompatActivity {
                         resumeMediaPlayer();
                     }
                 });
+
+        progressTV.setOnClickListener(v -> isTimeReversed = !isTimeReversed);
 
         findViewById(R.id.quitTV).setOnClickListener(v -> MainActivity.this.quitApp());
     }
@@ -189,8 +196,7 @@ public class MainActivity extends AppCompatActivity {
             slider.setValueFrom(0);
             slider.setValueTo(mediaPlayer.getDuration());
 
-            ((TextView) findViewById(R.id.durationTV))
-                    .setText(getFormattedTime(mediaPlayer.getDuration()));
+            durationTV.setText(getFormattedTime(mediaPlayer.getDuration(), isTimeReversed));
 
             mediaPlayer.start();
             updateHandler.postDelayed(updateRunnable, 0);
@@ -248,7 +254,7 @@ public class MainActivity extends AppCompatActivity {
         finish();
     }
 
-    private String getFormattedTime(long millis) {
+    private String getFormattedTime(long millis, boolean isTimeReversed) {
 
         long minutes = (millis / 1000) / 60;
         long seconds = (millis / 1000) % 60;
@@ -257,7 +263,9 @@ public class MainActivity extends AppCompatActivity {
 
         String secs = (secondsStr.length() >= 2) ? secondsStr.substring(0, 2) : "0" + secondsStr;
 
-        return minutes + ":" + secs;
+        if (!isTimeReversed) return minutes + ":" + secs;
+
+        return "-" + getFormattedTime(mediaPlayer.getDuration() - millis, false);
     }
 
     private void populateMetaDataTextViews(Uri uri, long millis) {
