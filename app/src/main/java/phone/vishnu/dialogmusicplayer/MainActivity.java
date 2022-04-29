@@ -106,6 +106,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void finish() {
+        super.finishAndRemoveTask();
+    }
+
     private void initViews() {
         slider = findViewById(R.id.slider);
         imageView = findViewById(R.id.playPauseButton);
