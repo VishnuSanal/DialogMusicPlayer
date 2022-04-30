@@ -268,7 +268,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void resetMediaPlayer() {
-        imageView.setImageResource(R.drawable.ic_play);
+        imageView.setImageResource(R.drawable.ic_replay);
         enableScreenRotation();
     }
 
