@@ -124,7 +124,16 @@ public class MainActivity extends AppCompatActivity {
     private void setListeners() {
         slider.addOnChangeListener(
                 (slider, value, fromUser) -> {
-                    if (mediaPlayer != null) if (fromUser) mediaPlayer.seekTo((int) value);
+                    if (mediaPlayer != null) {
+                        if (fromUser) {
+                            mediaPlayer.seekTo((int) value);
+
+                            if (!mediaPlayer.isPlaying())
+                                if (value != mediaPlayer.getDuration())
+                                    imageView.setImageResource(R.drawable.ic_play);
+                                else resetMediaPlayer();
+                        }
+                    }
                 });
 
         updateHandler = new Handler();
@@ -149,11 +158,14 @@ public class MainActivity extends AppCompatActivity {
 
         imageView.setOnClickListener(
                 v -> {
-                    if (mediaPlayer.isPlaying()) {
-                        pauseMediaPlayer();
-                    } else {
-                        resumeMediaPlayer();
-                    }
+                    if (mediaPlayer != null)
+                        if (mediaPlayer.isPlaying()) pauseMediaPlayer();
+                        else {
+                            if (mediaPlayer.getCurrentPosition() == mediaPlayer.getDuration())
+                                mediaPlayer.seekTo(0);
+
+                            resumeMediaPlayer();
+                        }
                 });
 
         progressTV.setOnClickListener(v -> isTimeReversed = !isTimeReversed);
@@ -209,6 +221,8 @@ public class MainActivity extends AppCompatActivity {
 
             imageView.setImageResource(R.drawable.ic_pause);
 
+            mediaPlayer.setOnCompletionListener(mediaPlayer -> resetMediaPlayer());
+
             populateMetaDataTextViews(uri, mediaPlayer.getDuration());
             setTextViewScrollingBehaviour();
         }
@@ -251,6 +265,11 @@ public class MainActivity extends AppCompatActivity {
         mediaPlayer.start();
         imageView.setImageResource(R.drawable.ic_pause);
         disableScreenRotation();
+    }
+
+    private void resetMediaPlayer() {
+        imageView.setImageResource(R.drawable.ic_play);
+        enableScreenRotation();
     }
 
     private void quitApp() {
