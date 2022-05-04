@@ -6,4 +6,5 @@
 	<string name="quit">Quit</string>
 
 	<string name="play_pause_button" translatable="false">Play Pause Button</string>
+	<string name="one_x">1x</string>
 </resources>

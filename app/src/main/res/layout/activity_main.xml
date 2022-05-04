@@ -36,71 +36,11 @@
 			app:layout_constraintTop_toTopOf="parent" />
 
 		<TextView
-			android:id="@+id/progressTV"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:layout_marginStart="8dp"
-			android:layout_marginEnd="8dp"
-			android:textColor="@color/textColorLight"
-			android:textSize="12sp"
-			app:layout_constraintBottom_toTopOf="@id/slider"
-			app:layout_constraintStart_toStartOf="@id/slider"
-			app:layout_constraintTop_toBottomOf="@id/titleTV"
-			tools:text="00:00" />
-
-		<TextView
-			android:id="@+id/durationTV"
-			android:layout_width="wrap_content"
-			android:layout_height="wrap_content"
-			android:layout_marginStart="8dp"
-			android:layout_marginEnd="8dp"
-			android:textColor="@color/textColorLight"
-			android:textSize="12sp"
-			app:layout_constraintBottom_toTopOf="@id/slider"
-			app:layout_constraintEnd_toEndOf="@id/slider"
-			app:layout_constraintTop_toBottomOf="@id/titleTV"
-			tools:text="00:00" />
-
-		<com.google.android.material.slider.Slider
-			android:id="@+id/slider"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:layout_marginStart="8dp"
-			android:layout_marginTop="32dp"
-			android:layout_marginEnd="4dp"
-			app:haloColor="@color/sliderHaloColor"
-			app:haloRadius="12dp"
-			app:layout_constraintEnd_toEndOf="parent"
-			app:layout_constraintStart_toStartOf="parent"
-			app:layout_constraintTop_toBottomOf="@id/titleTV"
-			app:thumbColor="@color/BGColor"
-			app:thumbElevation="2dp"
-			app:thumbRadius="8dp"
-			app:thumbStrokeColor="@color/accentColor"
-			app:thumbStrokeWidth="4dp"
-			app:trackColorActive="@color/sliderActiveColor"
-			app:trackColorInactive="@color/sliderInactiveColor" />
-
-		<ImageView
-			android:id="@+id/playPauseButton"
-			android:layout_width="36dp"
-			android:layout_height="36dp"
-			android:background="?attr/selectableItemBackgroundBorderless"
-			android:contentDescription="@string/play_pause_button"
-			android:padding="4dp"
-			android:scaleType="fitXY"
-			android:src="@drawable/ic_play"
-			app:layout_constraintBottom_toBottomOf="@id/artistNameTV"
-			app:layout_constraintEnd_toEndOf="@id/slider"
-			app:layout_constraintTop_toTopOf="@id/fileNameTV"
-			app:tint="@color/accentColor" />
-
-		<TextView
 			android:id="@+id/fileNameTV"
 			android:layout_width="0dp"
 			android:layout_height="wrap_content"
 			android:layout_marginStart="8dp"
-			android:layout_marginTop="8dp"
+			android:layout_marginTop="4dp"
 			android:layout_marginEnd="8dp"
 			android:layout_marginBottom="2dp"
 			android:fontFamily="@font/poppins"
@@ -109,10 +49,11 @@
 			android:textColor="@color/textColor"
 			android:textSize="14sp"
 			app:layout_constraintBottom_toTopOf="@id/artistNameTV"
-			app:layout_constraintEnd_toStartOf="@id/playPauseButton"
+			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintHorizontal_bias="0"
-			app:layout_constraintStart_toStartOf="@id/slider"
-			app:layout_constraintTop_toBottomOf="@id/slider" />
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toBottomOf="@id/titleTV"
+			tools:text="Dreaming On" />
 
 		<TextView
 			android:id="@+id/artistNameTV"
@@ -121,18 +62,114 @@
 			android:layout_marginStart="8dp"
 			android:layout_marginTop="2dp"
 			android:layout_marginEnd="8dp"
-			android:layout_marginBottom="8dp"
+			android:layout_marginBottom="4dp"
 			android:fontFamily="@font/poppins"
 			android:letterSpacing="0.1"
 			android:maxLines="1"
 			android:scrollbars="horizontal"
 			android:textColor="@color/textColor"
 			android:textSize="12sp"
-			app:layout_constraintBottom_toTopOf="@id/quitTV"
-			app:layout_constraintEnd_toStartOf="@id/playPauseButton"
+			app:layout_constraintBottom_toTopOf="@id/slider"
+			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintHorizontal_bias="0"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toBottomOf="@id/fileNameTV"
+			tools:text="NEFFEX" />
+
+		<com.google.android.material.slider.Slider
+			android:id="@+id/slider"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="8dp"
+			android:layout_marginTop="4dp"
+			android:layout_marginEnd="8dp"
+			android:layout_marginBottom="4dp"
+			app:haloColor="@color/sliderHaloColor"
+			app:haloRadius="12dp"
+			app:layout_constraintBottom_toTopOf="@id/playPauseButton"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toBottomOf="@id/artistNameTV"
+			app:thumbColor="@color/BGColor"
+			app:thumbElevation="2dp"
+			app:thumbRadius="8dp"
+			app:thumbStrokeColor="@color/accentColor"
+			app:thumbStrokeWidth="4dp"
+			app:trackColorActive="@color/sliderActiveColor"
+			app:trackColorInactive="@color/sliderInactiveColor" />
+
+		<TextView
+			android:id="@+id/progressTV"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginStart="8dp"
+			android:textColor="@color/textColorLight"
+			android:textSize="12sp"
 			app:layout_constraintStart_toStartOf="@id/slider"
-			app:layout_constraintTop_toBottomOf="@id/fileNameTV" />
+			app:layout_constraintTop_toBottomOf="@id/slider"
+			tools:text="00:00" />
+
+		<TextView
+			android:id="@+id/durationTV"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginEnd="8dp"
+			android:textColor="@color/textColorLight"
+			android:textSize="12sp"
+			app:layout_constraintEnd_toEndOf="@id/slider"
+			app:layout_constraintTop_toBottomOf="@id/slider"
+			tools:text="00:00" />
+
+		<ImageView
+			android:id="@+id/repeatButton"
+			android:layout_width="28dp"
+			android:layout_height="22dp"
+			android:layout_margin="4dp"
+			android:background="@drawable/button_background"
+			android:contentDescription="@string/play_pause_button"
+			android:padding="4dp"
+			android:scaleType="fitXY"
+			android:src="@drawable/ic_repeat"
+			app:layout_constraintBottom_toBottomOf="@id/playPauseButton"
+			app:layout_constraintEnd_toStartOf="@id/playPauseButton"
+			app:layout_constraintHorizontal_bias="1"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toTopOf="@id/playPauseButton"
+			app:tint="@color/white" />
+
+		<ImageView
+			android:id="@+id/playPauseButton"
+			android:layout_width="44dp"
+			android:layout_height="44dp"
+			android:layout_margin="4dp"
+			android:background="?attr/selectableItemBackgroundBorderless"
+			android:contentDescription="@string/play_pause_button"
+			android:padding="4dp"
+			android:scaleType="fitXY"
+			android:src="@drawable/ic_play"
+			app:layout_constraintBottom_toTopOf="@id/quitTV"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintStart_toStartOf="parent"
+			app:layout_constraintTop_toBottomOf="@id/slider"
+			app:tint="@color/accentColor" />
+
+		<ImageView
+			android:id="@+id/playbackSpeedButton"
+			android:layout_width="26dp"
+			android:layout_height="22dp"
+			android:layout_margin="4dp"
+			android:background="@drawable/button_background"
+			android:contentDescription="@string/play_pause_button"
+			android:fontFamily="@font/poppins"
+			android:padding="4dp"
+			android:scaleType="fitXY"
+			android:src="@drawable/ic_speed"
+			app:layout_constraintBottom_toBottomOf="@id/playPauseButton"
+			app:layout_constraintEnd_toEndOf="parent"
+			app:layout_constraintHorizontal_bias="0"
+			app:layout_constraintStart_toEndOf="@id/playPauseButton"
+			app:layout_constraintTop_toTopOf="@id/playPauseButton"
+			app:tint="@color/white" />
 
 		<TextView
 			android:id="@+id/quitTV"
@@ -153,7 +190,7 @@
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintHorizontal_bias="0.25"
 			app:layout_constraintStart_toStartOf="parent"
-			app:layout_constraintTop_toBottomOf="@id/artistNameTV"
+			app:layout_constraintTop_toBottomOf="@id/playPauseButton"
 			app:layout_constraintVertical_bias="1" />
 
 	</androidx.constraintlayout.widget.ConstraintLayout>
