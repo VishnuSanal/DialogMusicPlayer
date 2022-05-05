@@ -201,6 +201,24 @@ public class MainActivity extends AppCompatActivity {
                     playbackSpeedTV.setText(text);
                     playbackSpeedTV.setTag(speed);
                 });
+
+        repeatIV.setOnClickListener(
+                v -> {
+                    int state = (int) repeatIV.getTag();
+
+                    if (state == 0) {
+                        repeatIV.setColorFilter(getResources().getColor(R.color.accentColor));
+                        repeatIV.setTag(1);
+                    } else if (state == 1) {
+                        repeatIV.setImageResource(R.drawable.ic_repeat_one);
+                        repeatIV.setColorFilter(getResources().getColor(R.color.accentColor));
+                        repeatIV.setTag(2);
+                    } else if (state == 2) {
+                        repeatIV.setImageResource(R.drawable.ic_repeat);
+                        repeatIV.setColorFilter(getResources().getColor(R.color.textColorLight));
+                        repeatIV.setTag(0);
+                    }
+                });
     }
 
     private void initTasks(Intent intent) {
