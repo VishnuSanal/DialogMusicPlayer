@@ -103,10 +103,11 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:layout_marginStart="8dp"
+			android:fontFamily="@font/poppins"
 			android:textColor="@color/textColorLight"
 			android:textSize="12sp"
+			app:layout_constraintBaseline_toBottomOf="@id/slider"
 			app:layout_constraintStart_toStartOf="@id/slider"
-			app:layout_constraintTop_toBottomOf="@id/slider"
 			tools:text="00:00" />
 
 		<TextView
@@ -114,33 +115,38 @@
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
 			android:layout_marginEnd="8dp"
+			android:fontFamily="@font/poppins"
 			android:textColor="@color/textColorLight"
 			android:textSize="12sp"
+			app:layout_constraintBaseline_toBottomOf="@id/slider"
 			app:layout_constraintEnd_toEndOf="@id/slider"
-			app:layout_constraintTop_toBottomOf="@id/slider"
 			tools:text="00:00" />
 
-		<ImageView
-			android:id="@+id/repeatButton"
-			android:layout_width="28dp"
-			android:layout_height="22dp"
+		<TextView
+			android:id="@+id/playbackSpeedButton"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
 			android:layout_margin="4dp"
-			android:background="@drawable/button_background"
+			android:background="?attr/selectableItemBackgroundBorderless"
+			android:clickable="true"
+			android:focusable="true"
 			android:contentDescription="@string/play_pause_button"
 			android:padding="4dp"
-			android:scaleType="fitXY"
-			android:src="@drawable/ic_repeat"
+			android:text="@string/one_x"
+			android:textAlignment="center"
+			android:textColor="@color/textColorLight"
+			android:textStyle="bold"
 			app:layout_constraintBottom_toBottomOf="@id/playPauseButton"
 			app:layout_constraintEnd_toStartOf="@id/playPauseButton"
-			app:layout_constraintHorizontal_bias="1"
+			app:layout_constraintHorizontal_bias="0"
 			app:layout_constraintStart_toStartOf="parent"
 			app:layout_constraintTop_toTopOf="@id/playPauseButton"
 			app:tint="@color/white" />
 
 		<ImageView
 			android:id="@+id/playPauseButton"
-			android:layout_width="44dp"
-			android:layout_height="44dp"
+			android:layout_width="48dp"
+			android:layout_height="48dp"
 			android:layout_margin="4dp"
 			android:background="?attr/selectableItemBackgroundBorderless"
 			android:contentDescription="@string/play_pause_button"
@@ -154,22 +160,23 @@
 			app:tint="@color/accentColor" />
 
 		<ImageView
-			android:id="@+id/playbackSpeedButton"
-			android:layout_width="26dp"
-			android:layout_height="22dp"
+			android:id="@+id/repeatButton"
+			android:layout_width="32dp"
+			android:layout_height="32dp"
 			android:layout_margin="4dp"
-			android:background="@drawable/button_background"
+			android:background="?attr/selectableItemBackgroundBorderless"
+			android:clickable="true"
+			android:focusable="true"
 			android:contentDescription="@string/play_pause_button"
-			android:fontFamily="@font/poppins"
 			android:padding="4dp"
 			android:scaleType="fitXY"
-			android:src="@drawable/ic_speed"
+			android:src="@drawable/ic_repeat"
 			app:layout_constraintBottom_toBottomOf="@id/playPauseButton"
 			app:layout_constraintEnd_toEndOf="parent"
-			app:layout_constraintHorizontal_bias="0"
+			app:layout_constraintHorizontal_bias="1"
 			app:layout_constraintStart_toEndOf="@id/playPauseButton"
 			app:layout_constraintTop_toTopOf="@id/playPauseButton"
-			app:tint="@color/white" />
+			app:tint="@color/textColorLight" />
 
 		<TextView
 			android:id="@+id/quitTV"
