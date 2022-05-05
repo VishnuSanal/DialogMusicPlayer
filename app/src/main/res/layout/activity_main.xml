@@ -124,8 +124,8 @@
 
 		<TextView
 			android:id="@+id/playbackSpeedButton"
-			android:layout_width="32dp"
-			android:layout_height="32dp"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
 			android:layout_margin="4dp"
 			android:background="?attr/selectableItemBackgroundBorderless"
 			android:clickable="true"
@@ -133,7 +133,7 @@
 			android:contentDescription="@string/play_pause_button"
 			android:padding="4dp"
 			android:text="@string/one_x"
-			android:textAlignment="center"
+			android:gravity="center_vertical"
 			android:textColor="@color/textColorLight"
 			android:textStyle="bold"
 			app:layout_constraintBottom_toBottomOf="@id/playPauseButton"

@@ -46,9 +46,8 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer mediaPlayer;
 
     private Slider slider;
-    private ImageView playPauseButton;
-
-    private TextView fileNameTV, artistNameTV, progressTV, durationTV;
+    private ImageView playPauseButton, repeatIV;
+    private TextView fileNameTV, artistNameTV, progressTV, durationTV, playbackSpeedTV;
 
     private Handler updateHandler;
     private Runnable updateRunnable;
@@ -118,6 +117,10 @@ public class MainActivity extends AppCompatActivity {
         artistNameTV = findViewById(R.id.artistNameTV);
         progressTV = findViewById(R.id.progressTV);
         durationTV = findViewById(R.id.durationTV);
+        repeatIV = findViewById(R.id.repeatButton);
+        repeatIV.setTag(0);
+        playbackSpeedTV = findViewById(R.id.playbackSpeedButton);
+        playbackSpeedTV.setTag(1.0F);
         setListeners();
     }
 
@@ -171,6 +174,33 @@ public class MainActivity extends AppCompatActivity {
         progressTV.setOnClickListener(v -> isTimeReversed = !isTimeReversed);
 
         findViewById(R.id.quitTV).setOnClickListener(v -> MainActivity.this.quitApp());
+
+        repeatIV.setOnClickListener(v -> {});
+
+        playbackSpeedTV.setOnClickListener(
+                v -> {
+                    float speed = (float) playbackSpeedTV.getTag();
+                    String text = "";
+
+                    //                                float[] speeds = {0.5F, 1.0F, 1.5F, 2.0F};
+
+                    if (speed == 0.5F) {
+                        speed = 1.0F;
+                        text = "1x";
+                    } else if (speed == 1.0F) {
+                        speed = 1.5F;
+                        text = "1.5x";
+                    } else if (speed == 1.5F) {
+                        speed = 2.0F;
+                        text = "2x";
+                    } else if (speed == 2.0F) {
+                        speed = 0.5F;
+                        text = "0.5x";
+                    }
+
+                    playbackSpeedTV.setText(text);
+                    playbackSpeedTV.setTag(speed);
+                });
     }
 
     private void initTasks(Intent intent) {
