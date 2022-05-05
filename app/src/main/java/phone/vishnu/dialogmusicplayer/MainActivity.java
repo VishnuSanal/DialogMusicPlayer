@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer mediaPlayer;
 
     private Slider slider;
-    private ImageView imageView;
+    private ImageView playPauseButton;
 
     private TextView fileNameTV, artistNameTV, progressTV, durationTV;
 
@@ -113,7 +113,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void initViews() {
         slider = findViewById(R.id.slider);
-        imageView = findViewById(R.id.playPauseButton);
+        playPauseButton = findViewById(R.id.playPauseButton);
         fileNameTV = findViewById(R.id.fileNameTV);
         artistNameTV = findViewById(R.id.artistNameTV);
         progressTV = findViewById(R.id.progressTV);
@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
 
                             if (!mediaPlayer.isPlaying())
                                 if (value != mediaPlayer.getDuration())
-                                    imageView.setImageResource(R.drawable.ic_play);
+                                    playPauseButton.setImageResource(R.drawable.ic_play);
                                 else resetMediaPlayer();
                         }
                     }
@@ -156,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
 
         slider.setLabelFormatter(value -> getFormattedTime((long) value, isTimeReversed));
 
-        imageView.setOnClickListener(
+        playPauseButton.setOnClickListener(
                 v -> {
                     if (mediaPlayer != null)
                         if (mediaPlayer.isPlaying()) pauseMediaPlayer();
@@ -219,7 +219,7 @@ public class MainActivity extends AppCompatActivity {
             updateHandler.postDelayed(updateRunnable, 0);
             disableScreenRotation();
 
-            imageView.setImageResource(R.drawable.ic_pause);
+            playPauseButton.setImageResource(R.drawable.ic_pause);
 
             mediaPlayer.setOnCompletionListener(mediaPlayer -> resetMediaPlayer());
 
@@ -257,18 +257,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void pauseMediaPlayer() {
         mediaPlayer.pause();
-        imageView.setImageResource(R.drawable.ic_play);
+        playPauseButton.setImageResource(R.drawable.ic_play);
         enableScreenRotation();
     }
 
     private void resumeMediaPlayer() {
         mediaPlayer.start();
-        imageView.setImageResource(R.drawable.ic_pause);
+        playPauseButton.setImageResource(R.drawable.ic_pause);
         disableScreenRotation();
     }
 
     private void resetMediaPlayer() {
-        imageView.setImageResource(R.drawable.ic_replay);
+        playPauseButton.setImageResource(R.drawable.ic_replay);
         enableScreenRotation();
     }
 
