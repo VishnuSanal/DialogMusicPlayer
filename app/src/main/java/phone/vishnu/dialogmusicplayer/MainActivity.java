@@ -207,10 +207,11 @@ public class MainActivity extends AppCompatActivity {
                     int state = (int) repeatIV.getTag();
 
                     if (state == 0) {
+                        repeatIV.setImageResource(R.drawable.ic_repeat_one);
                         repeatIV.setColorFilter(getResources().getColor(R.color.accentColor));
                         repeatIV.setTag(1);
                     } else if (state == 1) {
-                        repeatIV.setImageResource(R.drawable.ic_repeat_one);
+                        repeatIV.setImageResource(R.drawable.ic_repeat);
                         repeatIV.setColorFilter(getResources().getColor(R.color.accentColor));
                         repeatIV.setTag(2);
                     } else if (state == 2) {
