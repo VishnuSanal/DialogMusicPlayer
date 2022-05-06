@@ -7,4 +7,7 @@
 
 	<string name="play_pause_button" translatable="false">Play Pause Button</string>
 	<string name="one_x">1x</string>
+	<string name="one_five_x">1.5x</string>
+	<string name="two_x">2x</string>
+	<string name="zero_five_x">0.5x</string>
 </resources>

@@ -175,31 +175,30 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.quitTV).setOnClickListener(v -> MainActivity.this.quitApp());
 
-        repeatIV.setOnClickListener(v -> {});
-
         playbackSpeedTV.setOnClickListener(
                 v -> {
                     float speed = (float) playbackSpeedTV.getTag();
-                    String text = "";
 
                     //                                float[] speeds = {0.5F, 1.0F, 1.5F, 2.0F};
 
                     if (speed == 0.5F) {
-                        speed = 1.0F;
-                        text = "1x";
+                        playbackSpeedTV.setText(R.string.one_x);
+                        playbackSpeedTV.setTextColor(
+                                getResources().getColor(R.color.textColorLight));
+                        playbackSpeedTV.setTag(1.0F);
                     } else if (speed == 1.0F) {
-                        speed = 1.5F;
-                        text = "1.5x";
+                        playbackSpeedTV.setText(R.string.one_five_x);
+                        playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
+                        playbackSpeedTV.setTag(1.5F);
                     } else if (speed == 1.5F) {
-                        speed = 2.0F;
-                        text = "2x";
+                        playbackSpeedTV.setText(R.string.two_x);
+                        playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
+                        playbackSpeedTV.setTag(2.0F);
                     } else if (speed == 2.0F) {
-                        speed = 0.5F;
-                        text = "0.5x";
+                        playbackSpeedTV.setText(R.string.zero_five_x);
+                        playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
+                        playbackSpeedTV.setTag(0.5F);
                     }
-
-                    playbackSpeedTV.setText(text);
-                    playbackSpeedTV.setTag(speed);
                 });
 
         repeatIV.setOnClickListener(
