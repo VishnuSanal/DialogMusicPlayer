@@ -199,6 +199,8 @@ public class MainActivity extends AppCompatActivity {
                         playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
                         playbackSpeedTV.setTag(0.5F);
                     }
+
+                    updatePlaybackSpeed();
                 });
 
         repeatIV.setOnClickListener(
@@ -219,6 +221,12 @@ public class MainActivity extends AppCompatActivity {
                         repeatIV.setTag(0);
                     }
                 });
+    }
+
+    private void updatePlaybackSpeed() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            mediaPlayer.setPlaybackParams(
+                    mediaPlayer.getPlaybackParams().setSpeed((float) playbackSpeedTV.getTag()));
     }
 
     private void initTasks(Intent intent) {
