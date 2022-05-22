@@ -68,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
             if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
                     == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
             else requestPermissions(new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
+        else initTasks(getIntent());
     }
 
     @Override
