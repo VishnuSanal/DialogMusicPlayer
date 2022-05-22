@@ -53,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private Runnable updateRunnable;
 
     private boolean isTimeReversed = false;
+    private boolean isPlayingOnceInProgress = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -210,18 +211,28 @@ public class MainActivity extends AppCompatActivity {
                 v -> {
                     int state = (int) repeatIV.getTag();
 
+                    // 0 -> Repeat off
+                    // 1 -> Repeat once
+                    // 2 -> Repeat infinitely
+
                     if (state == 0) {
                         repeatIV.setImageResource(R.drawable.ic_repeat_one);
                         repeatIV.setColorFilter(getResources().getColor(R.color.accentColor));
                         repeatIV.setTag(1);
+
+                        isPlayingOnceInProgress = true;
                     } else if (state == 1) {
                         repeatIV.setImageResource(R.drawable.ic_repeat);
                         repeatIV.setColorFilter(getResources().getColor(R.color.accentColor));
                         repeatIV.setTag(2);
+
+                        isPlayingOnceInProgress = false;
                     } else if (state == 2) {
                         repeatIV.setImageResource(R.drawable.ic_repeat);
                         repeatIV.setColorFilter(getResources().getColor(R.color.textColorLight));
                         repeatIV.setTag(0);
+
+                        isPlayingOnceInProgress = false;
                     }
                 });
     }
@@ -283,7 +294,33 @@ public class MainActivity extends AppCompatActivity {
 
             playPauseButton.setImageResource(R.drawable.ic_pause);
 
-            mediaPlayer.setOnCompletionListener(mediaPlayer -> resetMediaPlayer());
+            mediaPlayer.setOnCompletionListener(
+                    mediaPlayer -> {
+                        int state = (int) repeatIV.getTag();
+
+                        resetMediaPlayer();
+
+                        if (state == 1) {
+
+                            if (!isPlayingOnceInProgress) {
+
+                                isPlayingOnceInProgress = true;
+
+                                if (mediaPlayer.getCurrentPosition() == mediaPlayer.getDuration())
+                                    mediaPlayer.seekTo(0);
+
+                                resumeMediaPlayer();
+
+                            } else isPlayingOnceInProgress = false;
+
+                        } else if (state == 2) {
+
+                            if (mediaPlayer.getCurrentPosition() == mediaPlayer.getDuration())
+                                mediaPlayer.seekTo(0);
+
+                            resumeMediaPlayer();
+                        }
+                    });
 
             populateMetaDataTextViews(uri, mediaPlayer.getDuration());
             setTextViewScrollingBehaviour();
