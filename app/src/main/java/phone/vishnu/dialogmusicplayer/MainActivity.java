@@ -246,12 +246,15 @@ public class MainActivity extends AppCompatActivity {
 
             Log.e("vishnu", "initTasks:" + uri);
 
-            if (uri == null)
+            if (uri == null) {
                 Toast.makeText(
                                 this,
                                 "Oops! Something went wrong\n\n" + intent.getAction(),
                                 Toast.LENGTH_LONG)
                         .show();
+                quitApp();
+                return;
+            }
 
             mediaPlayer = new MediaPlayer();
 
