@@ -147,11 +147,13 @@ public class MainActivity extends AppCompatActivity {
                     public void run() {
 
                         if (mediaPlayer != null) {
-                            slider.setValue(mediaPlayer.getCurrentPosition());
 
-                            progressTV.setText(
-                                    getFormattedTime(
-                                            mediaPlayer.getCurrentPosition(), isTimeReversed));
+                            final int currentPosition = mediaPlayer.getCurrentPosition();
+
+                            if (currentPosition <= slider.getValueTo())
+                                slider.setValue(currentPosition);
+
+                            progressTV.setText(getFormattedTime(currentPosition, isTimeReversed));
 
                             updateHandler.postDelayed(this, 10);
                         }
