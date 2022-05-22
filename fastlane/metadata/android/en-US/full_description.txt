@@ -1,3 +1,5 @@
+<i>The stock music player on my phone needed unnecessary permissions! So, I created one on my own :D</i>
+
 <i>Dialog Music Player</i> is the most minimalistic music player requiring no permissions except to access your storage (so that it can play your music).
 
-Do not be irritated if you don't find a launcher icon: there currently is none. The app accepts music files to play via the "open with" feature of Android, e.g. via a file manager. And as it has no icon in the launcher: should you ever want to uninstall it, you'll have to do that via Android's <i>Settings › Apps</i> menu (or via the „market app“ you used to install it).
+Do not be irritated if you don't find a launcher icon: there currently is none. The app accepts music files to play via the "open with" menu or from the "share to" menu of Android, e.g. via a file manager, other utility apps etc. And as it has no icon in the launcher: should you ever want to uninstall it, you'll have to do that via Android's <i>Settings › Apps</i> menu (or via the „market app“ you used to install it).
