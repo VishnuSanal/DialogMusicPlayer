@@ -23,7 +23,7 @@ plugins {
 spotless {
     java {
 
-        licenseHeaderFile 'license-spotless'
+        licenseHeaderFile 'spotless-header'
 
         importOrder('android', 'androidx', 'com', 'java', 'phone', '')
 
@@ -38,7 +38,7 @@ spotless {
 
     kotlin {
 
-        licenseHeaderFile 'license-spotless'
+`        licenseHeaderFile 'spotless-header'
 
         target 'app/src/**/*.kt'
 
