@@ -38,7 +38,7 @@ spotless {
 
     kotlin {
 
-`        licenseHeaderFile 'spotless-header'
+        licenseHeaderFile 'spotless-header'
 
         target 'app/src/**/*.kt'
 
