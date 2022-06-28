@@ -186,11 +186,19 @@ public class MainActivity extends AppCompatActivity {
                     //                                float[] speeds = {0.5F, 1.0F, 1.5F, 2.0F};
 
                     if (speed == 0.5F) {
+                        playbackSpeedTV.setText(R.string.zero_seven_five_x);
+                        playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
+                        playbackSpeedTV.setTag(0.75F);
+                    } else if (speed == 0.75F) {
                         playbackSpeedTV.setText(R.string.one_x);
                         playbackSpeedTV.setTextColor(
                                 getResources().getColor(R.color.textColorLight));
-                        playbackSpeedTV.setTag(1.0F);
+                        playbackSpeedTV.setTag(1F);
                     } else if (speed == 1.0F) {
+                        playbackSpeedTV.setText(R.string.one_two_five_x);
+                        playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
+                        playbackSpeedTV.setTag(1.25F);
+                    } else if (speed == 1.25F) {
                         playbackSpeedTV.setText(R.string.one_five_x);
                         playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
                         playbackSpeedTV.setTag(1.5F);
