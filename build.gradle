@@ -43,7 +43,8 @@ spotless {
         target 'app/src/**/*.kt'
 
         ktlint("0.39.0").userData(['kotlin_imports_layout': 'idea',
-                                   'indent_size': '4'])
+                                   'indent_size': '4',
+                                   'disabled_rules': 'no-wildcard-imports'])
 
         trimTrailingWhitespace()
 
