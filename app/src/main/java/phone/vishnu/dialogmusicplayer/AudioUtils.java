@@ -74,11 +74,11 @@ public class AudioUtils {
 
                 if (artist == null || artist.equals("<unknown>")) artist = "<Unknown Artist>";
 
-                return new Audio(name, artist, d, contentUri);
+                return new Audio(id, name, artist, d, contentUri);
             }
         }
 
-        return new Audio(extractName(uri), "<Unknown Artist>", Long.parseLong(duration), uri);
+        return new Audio(-1, extractName(uri), "<Unknown Artist>", Long.parseLong(duration), uri);
     }
 
     private static String extractName(Uri uri) {

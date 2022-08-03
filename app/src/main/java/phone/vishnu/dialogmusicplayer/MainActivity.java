@@ -38,12 +38,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 import com.google.android.material.slider.Slider;
 import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
 
+    private MainViewModel viewModel;
     private MediaPlayer mediaPlayer;
+    private Audio audio = null;
 
     private Slider slider;
     private ImageView playPauseButton, repeatIV;
@@ -54,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isTimeReversed = false;
     private boolean isPlayingOnceInProgress = false;
+    private boolean shouldSaveTime = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -157,6 +161,12 @@ public class MainActivity extends AppCompatActivity {
                             progressTV.setText(getFormattedTime(currentPosition, isTimeReversed));
 
                             updateHandler.postDelayed(this, 10);
+
+                            if (shouldSaveTime && audio != null) {
+                                if (currentPosition != mediaPlayer.getDuration())
+                                    viewModel.insert(new SaveItem(audio.getId(), currentPosition));
+                                else viewModel.delete(new SaveItem(audio.getId(), currentPosition));
+                            }
                         }
                     }
                 };
@@ -277,6 +287,8 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
+            viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+
             mediaPlayer = new MediaPlayer();
 
             try {
@@ -291,10 +303,20 @@ public class MainActivity extends AppCompatActivity {
                         .show();
             }
 
-            slider.setValueFrom(0);
-            slider.setValueTo(mediaPlayer.getDuration());
+            int duration = mediaPlayer.getDuration();
 
-            durationTV.setText(getFormattedTime(mediaPlayer.getDuration(), isTimeReversed));
+            audio = AudioUtils.getMetaData(this, String.valueOf(duration), uri);
+
+            if (duration > 5 * 60 * 1000) shouldSaveTime = true;
+
+            viewModel
+                    .getSaveItem(audio)
+                    .observe(this, saveItem -> mediaPlayer.seekTo((int) saveItem.getDuration()));
+
+            slider.setValueFrom(0);
+            slider.setValueTo(duration);
+
+            durationTV.setText(getFormattedTime(duration, isTimeReversed));
 
             mediaPlayer.start();
             updateHandler.postDelayed(updateRunnable, 0);
@@ -330,7 +352,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                     });
 
-            populateMetaDataTextViews(uri, mediaPlayer.getDuration());
+            populateMetaDataTextViews(audio);
             setTextViewScrollingBehaviour();
         }
     }
@@ -399,11 +421,9 @@ public class MainActivity extends AppCompatActivity {
         return "-" + getFormattedTime(mediaPlayer.getDuration() - millis, false);
     }
 
-    private void populateMetaDataTextViews(Uri uri, long millis) {
+    private void populateMetaDataTextViews(Audio audio) {
 
         try {
-
-            Audio audio = AudioUtils.getMetaData(this, String.valueOf(millis), uri);
 
             Log.e("vishnu", "populateMetaDataTextViews: " + audio);
 

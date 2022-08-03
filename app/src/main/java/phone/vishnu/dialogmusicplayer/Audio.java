@@ -20,20 +20,31 @@
 package phone.vishnu.dialogmusicplayer;
 
 import android.net.Uri;
+import androidx.annotation.NonNull;
 
 public class Audio {
 
+    long id;
     private String name, artist;
     private long duration;
     private Uri uri;
 
     public Audio() {}
 
-    public Audio(String name, String artist, long duration, Uri uri) {
+    public Audio(long id, String name, String artist, long duration, Uri uri) {
+        this.id = id;
         this.name = name;
         this.artist = artist;
         this.duration = duration;
         this.uri = uri;
+    }
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -68,10 +79,13 @@ public class Audio {
         this.uri = uri;
     }
 
+    @NonNull
     @Override
     public String toString() {
         return "Audio{"
-                + "name='"
+                + "id="
+                + id
+                + ", name='"
                 + name
                 + '\''
                 + ", artist='"

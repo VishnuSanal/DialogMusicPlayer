@@ -40,6 +40,6 @@ interface SaveItemDao {
     @Query("DELETE FROM SaveItem")
     fun deleteAll()
 
-    @Query("SELECT * FROM SaveItem WHERE path = :path")
-    fun getSaveItem(path: String): SaveItem
+    @Query("SELECT * FROM SaveItem WHERE id = :id")
+    fun getSaveItem(id: Long): SaveItem
 }

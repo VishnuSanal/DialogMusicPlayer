@@ -24,10 +24,10 @@ import androidx.room.PrimaryKey
 
 @Entity
 data class SaveItem(
-    @PrimaryKey val path: String,
+    @PrimaryKey val id: Long,
     val duration: Long,
 ) {
     override fun toString(): String {
-        return "ResumeItem(path='$path', duration=$duration)"
+        return "ResumeItem(path='$id', duration=$duration)"
     }
 }

@@ -29,6 +29,10 @@ class SaveItemRepository(application: Application?) {
         saveItemDao = SaveItemDatabase.getInstance(application!!).saveItemDao()
     }
 
+    suspend fun getSaveItem(id: Long): SaveItem {
+        return saveItemDao.getSaveItem(id)
+    }
+
     suspend fun insertSaveItem(saveItem: SaveItem?) {
         saveItemDao.insert(saveItem)
     }
