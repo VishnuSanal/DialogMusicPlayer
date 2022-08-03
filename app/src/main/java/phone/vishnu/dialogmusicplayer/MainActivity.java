@@ -311,7 +311,21 @@ public class MainActivity extends AppCompatActivity {
 
             viewModel
                     .getSaveItem(audio)
-                    .observe(this, saveItem -> mediaPlayer.seekTo((int) saveItem.getDuration()));
+                    .observe(
+                            this,
+                            saveItem -> {
+                                long saveTime = saveItem.getDuration();
+
+                                if (saveTime != 0) {
+                                    mediaPlayer.seekTo((int) saveTime);
+                                    Toast.makeText(
+                                                    this,
+                                                    "Resuming playback from "
+                                                            + getFormattedTime(saveTime, false),
+                                                    Toast.LENGTH_SHORT)
+                                            .show();
+                                }
+                            });
 
             slider.setValueFrom(0);
             slider.setValueTo(duration);
