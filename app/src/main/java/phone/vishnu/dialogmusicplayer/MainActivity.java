@@ -57,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean isTimeReversed = false;
     private boolean isPlayingOnceInProgress = false;
-    private boolean shouldSaveTime = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -162,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
 
                             updateHandler.postDelayed(this, 10);
 
-                            if (shouldSaveTime && audio != null) {
+                            if (audio != null) {
                                 if (currentPosition != mediaPlayer.getDuration())
                                     viewModel.insert(new SaveItem(audio.getId(), currentPosition));
                                 else viewModel.delete(new SaveItem(audio.getId(), currentPosition));
@@ -306,8 +305,6 @@ public class MainActivity extends AppCompatActivity {
             int duration = mediaPlayer.getDuration();
 
             audio = AudioUtils.getMetaData(this, String.valueOf(duration), uri);
-
-            if (duration > 5 * 60 * 1000) shouldSaveTime = true;
 
             viewModel
                     .getSaveItem(audio)
