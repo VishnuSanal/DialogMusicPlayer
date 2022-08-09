@@ -8,6 +8,8 @@
 
 	<color name="textColorLight">#434343</color>
 
+	<color name="rewindSeekButtonColor">@color/sliderHaloColor</color>
+
 	<color name="sliderActiveColor">@color/accentColor</color>
 	<color name="sliderInactiveColor">#A1A1A1</color>
 	<color name="sliderHaloColor">#D0E8374B</color>

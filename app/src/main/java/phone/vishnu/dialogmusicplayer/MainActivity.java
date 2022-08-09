@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private Audio audio = null;
 
     private Slider slider;
-    private ImageView playPauseButton, repeatIV;
+    private ImageView playPauseButton, repeatIV, rewindIV, seekIV;
     private TextView fileNameTV, artistNameTV, progressTV, durationTV, playbackSpeedTV;
 
     private Handler updateHandler;
@@ -123,6 +123,8 @@ public class MainActivity extends AppCompatActivity {
         progressTV = findViewById(R.id.progressTV);
         durationTV = findViewById(R.id.durationTV);
         repeatIV = findViewById(R.id.repeatButton);
+        rewindIV = findViewById(R.id.rewindButton);
+        seekIV = findViewById(R.id.seekButton);
         repeatIV.setTag(0);
         playbackSpeedTV = findViewById(R.id.playbackSpeedButton);
         playbackSpeedTV.setTag(1.0F);
@@ -251,6 +253,18 @@ public class MainActivity extends AppCompatActivity {
 
                         isPlayingOnceInProgress = false;
                     }
+                });
+
+        rewindIV.setOnClickListener(
+                v -> {
+                    if (mediaPlayer != null)
+                        mediaPlayer.seekTo(mediaPlayer.getCurrentPosition() - 10 * 1000);
+                });
+
+        seekIV.setOnClickListener(
+                v -> {
+                    if (mediaPlayer != null)
+                        mediaPlayer.seekTo(mediaPlayer.getCurrentPosition() + 10 * 1000);
                 });
     }
 
