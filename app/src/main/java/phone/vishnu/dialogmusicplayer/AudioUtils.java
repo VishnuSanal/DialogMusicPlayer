@@ -68,6 +68,12 @@ public class AudioUtils {
 
                 String name = cursor.getString(nameColumn);
 
+                if (name != null) {
+                    int index = name.lastIndexOf(".");
+
+                    if (index > -1) name = name.substring(0, index);
+                }
+
                 if (name == null || name.equals("<unknown>")) name = extractName(uri);
 
                 String artist = cursor.getString(artistColumn);
