@@ -134,9 +134,9 @@
 			android:background="?attr/selectableItemBackgroundBorderless"
 			android:clickable="true"
 			android:focusable="true"
+			android:gravity="center_vertical"
 			android:padding="4dp"
 			android:text="@string/one_x"
-			android:gravity="center_vertical"
 			android:textColor="@color/textColorLight"
 			android:textStyle="bold"
 			android:visibility="gone"
@@ -146,6 +146,24 @@
 			app:layout_constraintStart_toStartOf="@id/slider"
 			app:layout_constraintTop_toTopOf="@id/playPauseButton"
 			app:tint="@color/white" />
+
+		<ImageView
+			android:id="@+id/rewindButton"
+			android:layout_width="36dp"
+			android:layout_height="36dp"
+			android:layout_margin="4dp"
+			android:background="?attr/selectableItemBackgroundBorderless"
+			android:contentDescription="@string/play_pause_button"
+			android:padding="4dp"
+			android:scaleType="fitXY"
+			android:src="@drawable/ic_rewind"
+			android:visibility="gone"
+			app:layout_constraintBottom_toBottomOf="@id/playPauseButton"
+			app:layout_constraintEnd_toStartOf="@id/playPauseButton"
+			app:layout_constraintHorizontal_bias="1"
+			app:layout_constraintStart_toEndOf="@id/playbackSpeedButton"
+			app:layout_constraintTop_toTopOf="@id/playPauseButton"
+			app:tint="@color/rewindSeekButtonColor" />
 
 		<ImageView
 			android:id="@+id/playPauseButton"
@@ -166,6 +184,24 @@
 			app:tint="@color/accentColor" />
 
 		<ImageView
+			android:id="@+id/seekButton"
+			android:layout_width="36dp"
+			android:layout_height="36dp"
+			android:layout_margin="4dp"
+			android:background="?attr/selectableItemBackgroundBorderless"
+			android:contentDescription="@string/play_pause_button"
+			android:padding="4dp"
+			android:scaleType="fitXY"
+			android:src="@drawable/ic_seek"
+			android:visibility="gone"
+			app:layout_constraintBottom_toBottomOf="@id/playPauseButton"
+			app:layout_constraintEnd_toStartOf="@id/repeatButton"
+			app:layout_constraintHorizontal_bias="0"
+			app:layout_constraintStart_toEndOf="@id/playPauseButton"
+			app:layout_constraintTop_toTopOf="@id/playPauseButton"
+			app:tint="@color/rewindSeekButtonColor" />
+
+		<ImageView
 			android:id="@+id/repeatButton"
 			android:layout_width="32dp"
 			android:layout_height="32dp"
@@ -175,8 +211,8 @@
 			android:layout_marginBottom="4dp"
 			android:background="?attr/selectableItemBackgroundBorderless"
 			android:clickable="true"
-			android:focusable="true"
 			android:contentDescription="@string/repeat_track_toggle"
+			android:focusable="true"
 			android:padding="4dp"
 			android:scaleType="fitXY"
 			android:src="@drawable/ic_repeat"
