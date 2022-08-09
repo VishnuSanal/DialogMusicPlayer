@@ -314,6 +314,8 @@ public class MainActivity extends AppCompatActivity {
                                 "Oops! Something went wrong\n\n" + e + "\n\n" + "Uri: " + uri,
                                 Toast.LENGTH_LONG)
                         .show();
+
+                finish();
             }
 
             int duration = mediaPlayer.getDuration();
