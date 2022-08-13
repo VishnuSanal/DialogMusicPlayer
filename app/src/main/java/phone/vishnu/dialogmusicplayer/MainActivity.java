@@ -194,7 +194,7 @@ public class MainActivity extends AppCompatActivity {
                 v -> {
                     float speed = (float) playbackSpeedTV.getTag();
 
-                    //                                float[] speeds = {0.5F, 1.0F, 1.5F, 2.0F};
+                    //                    float[] speeds = {0.5F, 0.75F, 1.0F, 1.25F, 1.5F, 2.0F};
 
                     if (speed == 0.5F) {
                         playbackSpeedTV.setText(R.string.zero_seven_five_x);
@@ -269,9 +269,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updatePlaybackSpeed() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+
+            boolean isPlaying = mediaPlayer.isPlaying();
+
             mediaPlayer.setPlaybackParams(
                     mediaPlayer.getPlaybackParams().setSpeed((float) playbackSpeedTV.getTag()));
+
+            if (!isPlaying) mediaPlayer.pause();
+        }
     }
 
     private void initTasks(Intent intent) {
