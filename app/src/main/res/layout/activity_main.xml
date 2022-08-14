@@ -158,11 +158,18 @@
 			android:scaleType="fitXY"
 			android:src="@drawable/ic_rewind"
 			app:layout_constraintBottom_toBottomOf="@id/playPauseButton"
-			app:layout_constraintEnd_toStartOf="@id/seekButton"
+			app:layout_constraintEnd_toStartOf="@id/guideLineOne"
 			app:layout_constraintHorizontal_bias="1"
 			app:layout_constraintStart_toEndOf="@id/repeatButton"
 			app:layout_constraintTop_toTopOf="@id/playPauseButton"
 			app:tint="@color/rewindSeekButtonColor" />
+
+		<androidx.constraintlayout.widget.Guideline
+			android:id="@+id/guideLineOne"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:orientation="vertical"
+			app:layout_constraintGuide_percent="0.5" />
 
 		<ImageView
 			android:id="@+id/seekButton"
@@ -176,6 +183,8 @@
 			android:src="@drawable/ic_seek"
 			app:layout_constraintBottom_toBottomOf="@id/playPauseButton"
 			app:layout_constraintEnd_toStartOf="@id/playPauseButton"
+			app:layout_constraintHorizontal_bias="0"
+			app:layout_constraintStart_toEndOf="@id/guideLineOne"
 			app:layout_constraintTop_toTopOf="@id/playPauseButton"
 			app:tint="@color/rewindSeekButtonColor" />
 
