@@ -1,3 +1,0 @@
-- Now supports playback speed & repeat
-- UI/UX improvements
-- Fix bugs & glitches

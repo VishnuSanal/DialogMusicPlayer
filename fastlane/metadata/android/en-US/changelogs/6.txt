@@ -1,0 +1,4 @@
+- More control on playback speed (0.75x & 1.25x)
+- Save current playback position on quit
+- Seek/Rewind support
+- Fix bugs & glitches
