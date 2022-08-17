@@ -4,7 +4,7 @@ By using the app DialogMusicPlayer You are consenting to our policies regarding 
 
 ## Collection of Personal Information
 
-We DO NOT collect, store, use or share any information, personal or otherwise.
+We DO NOT collect any information from You.
 
 ## Email
 
