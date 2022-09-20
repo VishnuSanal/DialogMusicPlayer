@@ -17,8 +17,8 @@ The stock music player on my phone needed unnecessary permissions! So, I created
 
 <table>
 	<tr>
-		<td> <img src="https://github.com/VishnuSanal/DialogMusicPlayer/blob/master/fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" alt="Dark" height="400px"/> </td>
-		<td> <img src="https://github.com/VishnuSanal/DialogMusicPlayer/blob/master/fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" alt="Light" height="400px"/> </td>
+		<td> <img src="https://github.com/VishnuSanal/DialogMusicPlayer/blob/master/fastlane/metadata/android/en-US/images/phoneScreenshots/1.png" alt="Dark" height="400px"/> </td>
+		<td> <img src="https://github.com/VishnuSanal/DialogMusicPlayer/blob/master/fastlane/metadata/android/en-US/images/phoneScreenshots/2.png" alt="Light" height="400px"/> </td>
 	</tr>
 	<tr>
 		<th> Dark </th>
