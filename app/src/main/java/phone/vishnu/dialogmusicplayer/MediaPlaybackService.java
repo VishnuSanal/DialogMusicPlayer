@@ -70,7 +70,10 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
     private static final String ACTION_SEEK = "phone.vishnu.dialogmusicplayer.seek";
 
     private final BecomingNoisyReceiver becomingNoisyReceiver = new BecomingNoisyReceiver();
+    private final MediaButtonActionReceiver mediaButtonActionReceiver =
+            new MediaButtonActionReceiver();
     private final NotificationReceiver notificationReceiver = new NotificationReceiver();
+
     private MediaSessionCompat mediaSession;
     private MediaPlayer mediaPlayer;
     private Audio audio;
@@ -195,6 +198,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                     new IntentFilter(
                                                             AudioManager
                                                                     .ACTION_AUDIO_BECOMING_NOISY));
+                                            registerReceiver(
+                                                    mediaButtonActionReceiver,
+                                                    new IntentFilter(Intent.ACTION_MEDIA_BUTTON));
 
                                             IntentFilter notificationFilter = new IntentFilter();
                                             notificationFilter.addAction(ACTION_PLAY_PAUSE);
@@ -439,6 +445,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
     @Override
     public void onDestroy() {
         unregisterReceiver(becomingNoisyReceiver);
+        unregisterReceiver(mediaButtonActionReceiver);
         unregisterReceiver(notificationReceiver);
         super.onDestroy();
     }
@@ -568,6 +575,20 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
         public void onReceive(Context context, Intent intent) {
             if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction()))
                 mediaSession.getController().getTransportControls().pause();
+        }
+    }
+
+    class MediaButtonActionReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (!Intent.ACTION_MEDIA_BUTTON.equals(intent.getAction())) return;
+
+            if (mediaSession.getController().getPlaybackState().getState()
+                    == PlaybackStateCompat.STATE_PLAYING)
+                mediaSession.getController().getTransportControls().pause();
+            else if (mediaSession.getController().getPlaybackState().getState()
+                    == PlaybackStateCompat.STATE_PAUSED)
+                mediaSession.getController().getTransportControls().play();
         }
     }
 

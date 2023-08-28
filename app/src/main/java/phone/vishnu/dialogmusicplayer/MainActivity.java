@@ -176,6 +176,10 @@ public class MainActivity extends AppCompatActivity {
     public void onResume() {
         super.onResume();
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
+
+        if (MediaControllerCompat.getMediaController(MainActivity.this) != null)
+            MediaControllerCompat.getMediaController(MainActivity.this)
+                    .registerCallback(controllerCallback);
     }
 
     @Override
@@ -184,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
         if (MediaControllerCompat.getMediaController(MainActivity.this) != null)
             MediaControllerCompat.getMediaController(MainActivity.this)
                     .unregisterCallback(controllerCallback);
-        mediaBrowser.disconnect();
+        //        mediaBrowser.disconnect();
     }
 
     @Override
