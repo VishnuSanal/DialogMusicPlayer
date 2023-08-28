@@ -19,10 +19,13 @@
 
 package phone.vishnu.dialogmusicplayer;
 
+import android.Manifest;
 import android.content.ComponentName;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -36,6 +39,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -130,12 +134,77 @@ public class MainActivity extends AppCompatActivity {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        this.setFinishOnTouchOutside(false);
+
+        FileUtils.clearApplicationData(getApplicationContext()); // fix for an old mistake ;_;
+
+        setScreenWidth();
 
         initViews();
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
-        Intent intent = getIntent();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S_V2)
+            if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO)
+                    == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
+            else requestPermissions(new String[] {Manifest.permission.READ_MEDIA_AUDIO}, 0);
+        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
+            else requestPermissions(new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
+        else initTasks(getIntent());
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        setVolumeControlStream(AudioManager.STREAM_MUSIC);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        if (MediaControllerCompat.getMediaController(MainActivity.this) != null)
+            MediaControllerCompat.getMediaController(MainActivity.this)
+                    .unregisterCallback(controllerCallback);
+        mediaBrowser.disconnect();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+            int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == 0) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
+            else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                    if (shouldShowRequestPermissionRationale(
+                            Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                        Toast.makeText(
+                                        this,
+                                        "Storage permission denied\nPlease grant necessary permissions",
+                                        Toast.LENGTH_LONG)
+                                .show();
+                        requestPermissions(
+                                new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
+                    } else {
+                        Toast.makeText(
+                                        this,
+                                        "Storage permission denied\nPlease grant permission from settings",
+                                        Toast.LENGTH_LONG)
+                                .show();
+                    }
+            }
+        }
+    }
+
+    private void initTasks(Intent intent) {
 
         Log.e("vishnu", "initTasks Intent#getAction: " + intent.getAction());
 
@@ -196,26 +265,6 @@ public class MainActivity extends AppCompatActivity {
 
             mediaBrowser.connect();
         }
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        setVolumeControlStream(AudioManager.STREAM_MUSIC);
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        if (MediaControllerCompat.getMediaController(MainActivity.this) != null)
-            MediaControllerCompat.getMediaController(MainActivity.this)
-                    .unregisterCallback(controllerCallback);
-        mediaBrowser.disconnect();
     }
 
     void buildTransportControls() {
