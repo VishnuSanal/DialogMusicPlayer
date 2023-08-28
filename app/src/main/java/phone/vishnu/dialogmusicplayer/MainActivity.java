@@ -152,7 +152,7 @@ public class MainActivity extends AppCompatActivity {
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S_V2)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO)
                     == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
             else requestPermissions(new String[] {Manifest.permission.READ_MEDIA_AUDIO}, 0);
