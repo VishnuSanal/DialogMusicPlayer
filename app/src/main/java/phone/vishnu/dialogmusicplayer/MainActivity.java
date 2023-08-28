@@ -47,6 +47,8 @@ import com.google.android.material.slider.Slider;
 
 public class MainActivity extends AppCompatActivity {
 
+    public static final String QUIT_KEY = "phone.vishnu.dialogmusicplayer.quit";
+
     private MainViewModel viewModel;
 
     private MediaBrowserCompat mediaBrowser;
@@ -151,6 +153,8 @@ public class MainActivity extends AppCompatActivity {
         initViews();
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
+
+        if (getIntent().getBooleanExtra(QUIT_KEY, false)) finishAffinity();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO)

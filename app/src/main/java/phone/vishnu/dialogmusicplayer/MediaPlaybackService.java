@@ -281,7 +281,12 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
 
                         stopSelf();
 
-                        stopForeground(true); // TODO: kill app
+                        stopForeground(true);
+
+                        getApplication()
+                                .startActivity(
+                                        new Intent(getApplicationContext(), MainActivity.class)
+                                                .putExtra(MainActivity.QUIT_KEY, true));
                     }
 
                     @Override
