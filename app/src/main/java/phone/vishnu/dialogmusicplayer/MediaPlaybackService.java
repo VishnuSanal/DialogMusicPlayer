@@ -342,8 +342,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                         getApplication()
                                 .startActivity(
                                         new Intent(getApplicationContext(), MainActivity.class)
-                                                .putExtra(MainActivity.QUIT_KEY, true)
-                                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                                                .putExtra(MainActivity.QUIT_KEY, true));
                     }
 
                     @Override
