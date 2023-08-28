@@ -68,7 +68,13 @@ public class MainActivity extends AppCompatActivity {
                 public void onMetadataChanged(MediaMetadataCompat metadata) {
                     super.onMetadataChanged(metadata);
 
-                    id = metadata.getLong(MediaMetadataCompat.METADATA_KEY_MEDIA_ID);
+                    try {
+                        id = Long.parseLong(metadata.getString(
+                                                MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
+                    } catch (NumberFormatException e) {
+                        id = -1;
+                        e.printStackTrace();
+                    }
 
                     fileNameTV.setText(
                             metadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE));

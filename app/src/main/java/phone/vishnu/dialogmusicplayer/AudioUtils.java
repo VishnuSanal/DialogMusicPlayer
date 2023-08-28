@@ -85,6 +85,7 @@ public class AudioUtils {
                 return new Audio(
                         id,
                         new MediaMetadataCompat.Builder()
+                                .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, String.valueOf(id))
                                 .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
                                 .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
                                 .putLong(
@@ -99,6 +100,7 @@ public class AudioUtils {
         return new Audio(
                 -1,
                 new MediaMetadataCompat.Builder()
+                        .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, "-1")
                         .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, extractName(uri))
                         .putString(MediaMetadata.METADATA_KEY_ARTIST, "<Unknown Artist>")
                         .putLong(MediaMetadata.METADATA_KEY_DURATION, Long.parseLong(duration))
