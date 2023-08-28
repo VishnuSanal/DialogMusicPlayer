@@ -21,6 +21,7 @@ package phone.vishnu.dialogmusicplayer;
 
 import static android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -44,7 +45,6 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.media.MediaBrowserServiceCompat;
@@ -98,7 +98,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                     Runnable updateRunnable;
                     private AudioFocusRequest audioFocusRequest;
 
-                    @RequiresApi(api = Build.VERSION_CODES.O)
+                    @SuppressLint("UnspecifiedRegisterReceiverFlag")
                     @Override
                     public void onPlayFromUri(Uri uri, Bundle extras) {
                         super.onPlayFromUri(uri, extras);
@@ -111,39 +111,47 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                 (AudioManager)
                                                         getSystemService(Context.AUDIO_SERVICE);
 
-                                        audioFocusRequest =
-                                                new AudioFocusRequest.Builder(
-                                                                AudioManager.AUDIOFOCUS_GAIN)
-                                                        .setOnAudioFocusChangeListener(
-                                                                focusChange -> {
-                                                                    if (focusChange
-                                                                            == AUDIOFOCUS_LOSS_TRANSIENT)
-                                                                        onPause();
-                                                                    else if (focusChange
-                                                                            == AudioManager
-                                                                                    .AUDIOFOCUS_GAIN_TRANSIENT)
-                                                                        onPlay();
-                                                                    else if (focusChange
-                                                                            == AudioManager
-                                                                                    .AUDIOFOCUS_LOSS)
-                                                                        onPause();
-                                                                    else if (focusChange
-                                                                            == AudioManager
-                                                                                    .AUDIOFOCUS_GAIN)
-                                                                        onPlay();
-                                                                })
-                                                        .setAudioAttributes(
-                                                                new AudioAttributes.Builder()
-                                                                        .setContentType(
-                                                                                AudioAttributes
-                                                                                        .CONTENT_TYPE_MUSIC)
-                                                                        .build())
-                                                        .build();
+                                        boolean flag =
+                                                Build.VERSION.SDK_INT < Build.VERSION_CODES.O;
 
-                                        int result =
-                                                audioManager.requestAudioFocus(audioFocusRequest);
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                            audioFocusRequest =
+                                                    new AudioFocusRequest.Builder(
+                                                                    AudioManager.AUDIOFOCUS_GAIN)
+                                                            .setOnAudioFocusChangeListener(
+                                                                    focusChange -> {
+                                                                        if (focusChange
+                                                                                == AUDIOFOCUS_LOSS_TRANSIENT)
+                                                                            onPause();
+                                                                        else if (focusChange
+                                                                                == AudioManager
+                                                                                        .AUDIOFOCUS_GAIN_TRANSIENT)
+                                                                            onPlay();
+                                                                        else if (focusChange
+                                                                                == AudioManager
+                                                                                        .AUDIOFOCUS_LOSS)
+                                                                            onPause();
+                                                                        else if (focusChange
+                                                                                == AudioManager
+                                                                                        .AUDIOFOCUS_GAIN)
+                                                                            onPlay();
+                                                                    })
+                                                            .setAudioAttributes(
+                                                                    new AudioAttributes.Builder()
+                                                                            .setContentType(
+                                                                                    AudioAttributes
+                                                                                            .CONTENT_TYPE_MUSIC)
+                                                                            .build())
+                                                            .build();
 
-                                        if (result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                                            flag =
+                                                    audioManager.requestAudioFocus(
+                                                                    audioFocusRequest)
+                                                            == AudioManager
+                                                                    .AUDIOFOCUS_REQUEST_GRANTED;
+                                        }
+
+                                        if (flag) {
 
                                             startService(
                                                     new Intent(
@@ -152,17 +160,29 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                             mediaSession.setActive(true);
                                             mediaPlayer.start();
 
-                                            mediaSession.setPlaybackState(
-                                                    new PlaybackStateCompat.Builder()
-                                                            .setState(
-                                                                    PlaybackStateCompat
-                                                                            .STATE_PLAYING,
-                                                                    mediaPlayer
-                                                                            .getCurrentPosition(),
-                                                                    mediaPlayer
-                                                                            .getPlaybackParams()
-                                                                            .getSpeed())
-                                                            .build());
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                                mediaSession.setPlaybackState(
+                                                        new PlaybackStateCompat.Builder()
+                                                                .setState(
+                                                                        PlaybackStateCompat
+                                                                                .STATE_PLAYING,
+                                                                        mediaPlayer
+                                                                                .getCurrentPosition(),
+                                                                        mediaPlayer
+                                                                                .getPlaybackParams()
+                                                                                .getSpeed())
+                                                                .build());
+                                            } else {
+                                                mediaSession.setPlaybackState(
+                                                        new PlaybackStateCompat.Builder()
+                                                                .setState(
+                                                                        PlaybackStateCompat
+                                                                                .STATE_PLAYING,
+                                                                        mediaPlayer
+                                                                                .getCurrentPosition(),
+                                                                        1F)
+                                                                .build());
+                                            }
 
                                             registerReceiver(
                                                     becomingNoisyReceiver,
@@ -174,8 +194,15 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                             notificationFilter.addAction(ACTION_PLAY_PAUSE);
                                             notificationFilter.addAction(ACTION_CANCEL);
 
-                                            registerReceiver(
-                                                    notificationReceiver, notificationFilter);
+                                            if (Build.VERSION.SDK_INT
+                                                    >= Build.VERSION_CODES.TIRAMISU)
+                                                registerReceiver(
+                                                        notificationReceiver,
+                                                        notificationFilter,
+                                                        RECEIVER_NOT_EXPORTED);
+                                            else
+                                                registerReceiver(
+                                                        notificationReceiver, notificationFilter);
 
                                             audio =
                                                     AudioUtils.getMetaData(
@@ -207,38 +234,58 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
 
                                         if (mediaPlayer == null) return;
 
-                                        mediaSession.setPlaybackState(
-                                                new PlaybackStateCompat.Builder()
-                                                        .setState(
-                                                                mediaSession
-                                                                        .getController()
-                                                                        .getPlaybackState()
-                                                                        .getState(),
-                                                                mediaPlayer.getCurrentPosition(),
-                                                                mediaPlayer
-                                                                        .getPlaybackParams()
-                                                                        .getSpeed())
-                                                        .build());
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                            mediaSession.setPlaybackState(
+                                                    new PlaybackStateCompat.Builder()
+                                                            .setState(
+                                                                    PlaybackStateCompat
+                                                                            .STATE_PLAYING,
+                                                                    mediaPlayer
+                                                                            .getCurrentPosition(),
+                                                                    mediaPlayer
+                                                                            .getPlaybackParams()
+                                                                            .getSpeed())
+                                                            .build());
+                                        } else {
+                                            mediaSession.setPlaybackState(
+                                                    new PlaybackStateCompat.Builder()
+                                                            .setState(
+                                                                    PlaybackStateCompat
+                                                                            .STATE_PLAYING,
+                                                                    mediaPlayer
+                                                                            .getCurrentPosition(),
+                                                                    1F)
+                                                            .build());
+                                        }
 
                                         updateHandler.postDelayed(this, 10);
                                     }
                                 };
                     }
 
-                    @RequiresApi(api = Build.VERSION_CODES.O)
                     @Override
                     public void onPlay() {
                         super.onPlay();
 
                         mediaPlayer.start();
 
-                        mediaSession.setPlaybackState(
-                                new PlaybackStateCompat.Builder()
-                                        .setState(
-                                                PlaybackStateCompat.STATE_PLAYING,
-                                                mediaPlayer.getCurrentPosition(),
-                                                mediaPlayer.getPlaybackParams().getSpeed())
-                                        .build());
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            mediaSession.setPlaybackState(
+                                    new PlaybackStateCompat.Builder()
+                                            .setState(
+                                                    PlaybackStateCompat.STATE_PLAYING,
+                                                    mediaPlayer.getCurrentPosition(),
+                                                    mediaPlayer.getPlaybackParams().getSpeed())
+                                            .build());
+                        } else {
+                            mediaSession.setPlaybackState(
+                                    new PlaybackStateCompat.Builder()
+                                            .setState(
+                                                    PlaybackStateCompat.STATE_PLAYING,
+                                                    mediaPlayer.getCurrentPosition(),
+                                                    1F)
+                                            .build());
+                        }
 
                         updateHandler.postDelayed(updateRunnable, 10);
 
@@ -251,13 +298,23 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
 
                         mediaPlayer.pause();
 
-                        mediaSession.setPlaybackState(
-                                new PlaybackStateCompat.Builder()
-                                        .setState(
-                                                PlaybackStateCompat.STATE_PAUSED,
-                                                mediaPlayer.getCurrentPosition(),
-                                                mediaPlayer.getPlaybackParams().getSpeed())
-                                        .build());
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            mediaSession.setPlaybackState(
+                                    new PlaybackStateCompat.Builder()
+                                            .setState(
+                                                    PlaybackStateCompat.STATE_PAUSED,
+                                                    mediaPlayer.getCurrentPosition(),
+                                                    mediaPlayer.getPlaybackParams().getSpeed())
+                                            .build());
+                        } else {
+                            mediaSession.setPlaybackState(
+                                    new PlaybackStateCompat.Builder()
+                                            .setState(
+                                                    PlaybackStateCompat.STATE_PAUSED,
+                                                    mediaPlayer.getCurrentPosition(),
+                                                    1F)
+                                            .build());
+                        }
 
                         stopForeground(false);
 
@@ -266,13 +323,12 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                         startForeground(NOTIFICATION_ID, getNotification());
                     }
 
-                    @RequiresApi(api = Build.VERSION_CODES.O)
                     @Override
                     public void onStop() {
 
-                        AudioManager audioManager =
-                                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-                        audioManager.abandonAudioFocusRequest(audioFocusRequest);
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                            ((AudioManager) getSystemService(Context.AUDIO_SERVICE))
+                                    .abandonAudioFocusRequest(audioFocusRequest);
 
                         mediaSession.setActive(false);
 
@@ -286,7 +342,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                         getApplication()
                                 .startActivity(
                                         new Intent(getApplicationContext(), MainActivity.class)
-                                                .putExtra(MainActivity.QUIT_KEY, true));
+                                                .putExtra(MainActivity.QUIT_KEY, true)
+                                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
                     }
 
                     @Override
@@ -300,19 +357,21 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                     public void onSetPlaybackSpeed(float speed) {
                         super.onSetPlaybackSpeed(speed);
 
-                        mediaPlayer.setPlaybackParams(
-                                mediaPlayer.getPlaybackParams().setSpeed(speed));
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            mediaPlayer.setPlaybackParams(
+                                    mediaPlayer.getPlaybackParams().setSpeed(speed));
 
-                        mediaSession.setPlaybackState(
-                                new PlaybackStateCompat.Builder()
-                                        .setState(
-                                                mediaSession
-                                                        .getController()
-                                                        .getPlaybackState()
-                                                        .getState(),
-                                                mediaPlayer.getCurrentPosition(),
-                                                speed)
-                                        .build());
+                            mediaSession.setPlaybackState(
+                                    new PlaybackStateCompat.Builder()
+                                            .setState(
+                                                    mediaSession
+                                                            .getController()
+                                                            .getPlaybackState()
+                                                            .getState(),
+                                                    mediaPlayer.getCurrentPosition(),
+                                                    speed)
+                                            .build());
+                        }
                     }
 
                     @Override
@@ -325,13 +384,23 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
 
         mediaPlayer.setOnCompletionListener(
                 mp -> {
-                    mediaSession.setPlaybackState(
-                            new PlaybackStateCompat.Builder()
-                                    .setState(
-                                            PlaybackStateCompat.STATE_STOPPED,
-                                            mediaPlayer.getCurrentPosition(),
-                                            mediaPlayer.getPlaybackParams().getSpeed())
-                                    .build());
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        mediaSession.setPlaybackState(
+                                new PlaybackStateCompat.Builder()
+                                        .setState(
+                                                PlaybackStateCompat.STATE_STOPPED,
+                                                mediaPlayer.getCurrentPosition(),
+                                                mediaPlayer.getPlaybackParams().getSpeed())
+                                        .build());
+                    } else {
+                        mediaSession.setPlaybackState(
+                                new PlaybackStateCompat.Builder()
+                                        .setState(
+                                                PlaybackStateCompat.STATE_STOPPED,
+                                                mediaPlayer.getCurrentPosition(),
+                                                1F)
+                                        .build());
+                    }
 
                     int state = mediaSession.getController().getRepeatMode();
 
