@@ -50,11 +50,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val mutableLiveData: MutableLiveData<SaveItem> = MutableLiveData(SaveItem(id, 0))
 
         viewModelScope.launch(Dispatchers.IO) {
-
             val saveItem = repository?.getSaveItem(id)
 
-            if (saveItem != null)
+            if (saveItem != null) {
                 mutableLiveData.postValue(saveItem)
+            }
         }
 
         return mutableLiveData

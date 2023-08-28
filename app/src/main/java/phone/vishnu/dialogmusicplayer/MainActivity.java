@@ -69,7 +69,9 @@ public class MainActivity extends AppCompatActivity {
                     super.onMetadataChanged(metadata);
 
                     try {
-                        id = Long.parseLong(metadata.getString(
+                        id =
+                                Long.parseLong(
+                                        metadata.getString(
                                                 MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
                     } catch (NumberFormatException e) {
                         id = -1;

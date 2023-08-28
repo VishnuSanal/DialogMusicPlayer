@@ -26,7 +26,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [SaveItem::class],
-    version = 1
+    version = 1,
 )
 abstract class SaveItemDatabase : RoomDatabase() {
 
@@ -42,7 +42,7 @@ abstract class SaveItemDatabase : RoomDatabase() {
                 instance ?: Room.databaseBuilder(
                     context,
                     SaveItemDatabase::class.java,
-                    "dmp_save_database"
+                    "dmp_save_database",
                 ).build()
             }
         }
