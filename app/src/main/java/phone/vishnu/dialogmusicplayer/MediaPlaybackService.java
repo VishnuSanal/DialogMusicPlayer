@@ -30,6 +30,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -38,6 +40,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.provider.MediaStore;
 import android.service.media.MediaBrowserService;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -63,6 +66,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
 
     private static final String ACTION_PLAY_PAUSE = "phone.vishnu.dialogmusicplayer.playPause";
     private static final String ACTION_CANCEL = "phone.vishnu.dialogmusicplayer.cancel";
+    private static final String ACTION_REWIND = "phone.vishnu.dialogmusicplayer.rewind";
+    private static final String ACTION_SEEK = "phone.vishnu.dialogmusicplayer.seek";
+
     private final BecomingNoisyReceiver becomingNoisyReceiver = new BecomingNoisyReceiver();
     private final NotificationReceiver notificationReceiver = new NotificationReceiver();
     private MediaSessionCompat mediaSession;
@@ -193,6 +199,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                             IntentFilter notificationFilter = new IntentFilter();
                                             notificationFilter.addAction(ACTION_PLAY_PAUSE);
                                             notificationFilter.addAction(ACTION_CANCEL);
+                                            notificationFilter.addAction(ACTION_REWIND);
+                                            notificationFilter.addAction(ACTION_SEEK);
 
                                             if (Build.VERSION.SDK_INT
                                                     >= Build.VERSION_CODES.TIRAMISU)
@@ -452,6 +460,21 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                     .createNotificationChannel(notificationChannel);
         }
 
+        Bitmap albumArt;
+
+        try {
+            albumArt =
+                    MediaStore.Images.Media.getBitmap(
+                            getContentResolver(),
+                            Uri.parse(
+                                    "content://media/external/audio/media/"
+                                            + audio.getId()
+                                            + "/albumart"));
+        } catch (IOException | UnsupportedOperationException e) {
+            albumArt = BitmapFactory.decodeResource(getResources(), R.drawable.ic_icon);
+            e.printStackTrace();
+        }
+
         // https://stackoverflow.com/questions/63501425/java-android-media-player-notification
         NotificationCompat.Builder builder =
                 new NotificationCompat.Builder(MediaPlaybackService.this, "DMPChannel")
@@ -463,7 +486,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                 MediaButtonReceiver.buildMediaButtonPendingIntent(
                                                         MediaPlaybackService.this,
                                                         PlaybackStateCompat.ACTION_STOP))
-                                        .setShowActionsInCompactView(0))
+                                        .setShowActionsInCompactView(0, 1, 2))
                         .setColor(
                                 ContextCompat.getColor(
                                         MediaPlaybackService.this, R.color.accentColor))
@@ -485,13 +508,16 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                         .setContentText(
                                 audio.getMediaMetadata()
                                         .getText(MediaMetadataCompat.METADATA_KEY_ARTIST))
-                        //
-                        // .setLargeIcon(MusicLibrary.getAlbumBitmap(mContext,
-                        // description.getMediaId()))
+                        .setLargeIcon(albumArt)
                         .setAutoCancel(false)
                         .setDeleteIntent(
                                 MediaButtonReceiver.buildMediaButtonPendingIntent(
                                         this, PlaybackStateCompat.ACTION_STOP))
+                        .addAction(
+                                new NotificationCompat.Action(
+                                        R.drawable.ic_rewind,
+                                        "Rewind",
+                                        getPendingIntent(ACTION_REWIND)))
                         .addAction(
                                 mediaSession.getController().getPlaybackState().getState()
                                                 == PlaybackStateCompat.STATE_PLAYING
@@ -503,6 +529,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                 R.drawable.ic_play,
                                                 "Play",
                                                 getPendingIntent(ACTION_PLAY_PAUSE)))
+                        .addAction(
+                                new NotificationCompat.Action(
+                                        R.drawable.ic_seek, "Seek", getPendingIntent(ACTION_SEEK)))
                         .addAction(
                                 new NotificationCompat.Action(
                                         R.drawable.ic_clear,
@@ -556,6 +585,20 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                 startForeground(NOTIFICATION_ID, getNotification());
             } else if (ACTION_CANCEL.equals(intent.getAction()))
                 mediaSession.getController().getTransportControls().stop();
+            else if (ACTION_REWIND.equals(intent.getAction()))
+                mediaSession
+                        .getController()
+                        .getTransportControls()
+                        .seekTo(
+                                mediaSession.getController().getPlaybackState().getPosition()
+                                        - 10000);
+            else if (ACTION_SEEK.equals(intent.getAction()))
+                mediaSession
+                        .getController()
+                        .getTransportControls()
+                        .seekTo(
+                                mediaSession.getController().getPlaybackState().getPosition()
+                                        + 10000);
         }
     }
 }
