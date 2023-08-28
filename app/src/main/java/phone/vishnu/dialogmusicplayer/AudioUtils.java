@@ -22,9 +22,11 @@ package phone.vishnu.dialogmusicplayer;
 import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
+import android.media.MediaMetadata;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
+import android.support.v4.media.MediaMetadataCompat;
 
 public class AudioUtils {
 
@@ -80,11 +82,29 @@ public class AudioUtils {
 
                 if (artist == null || artist.equals("<unknown>")) artist = "<Unknown Artist>";
 
-                return new Audio(id, name, artist, d, contentUri);
+                return new Audio(
+                        id,
+                        new MediaMetadataCompat.Builder()
+                                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
+                                .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
+                                .putLong(
+                                        MediaMetadata.METADATA_KEY_DURATION,
+                                        Long.parseLong(duration))
+                                .build(),
+                        d,
+                        contentUri);
             }
         }
 
-        return new Audio(-1, extractName(uri), "<Unknown Artist>", Long.parseLong(duration), uri);
+        return new Audio(
+                -1,
+                new MediaMetadataCompat.Builder()
+                        .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, extractName(uri))
+                        .putString(MediaMetadata.METADATA_KEY_ARTIST, "<Unknown Artist>")
+                        .putLong(MediaMetadata.METADATA_KEY_DURATION, Long.parseLong(duration))
+                        .build(),
+                Long.parseLong(duration),
+                uri);
     }
 
     private static String extractName(Uri uri) {

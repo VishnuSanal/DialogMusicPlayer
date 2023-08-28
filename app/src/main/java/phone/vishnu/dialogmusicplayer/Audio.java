@@ -20,21 +20,21 @@
 package phone.vishnu.dialogmusicplayer;
 
 import android.net.Uri;
+import android.support.v4.media.MediaMetadataCompat;
 import androidx.annotation.NonNull;
 
 public class Audio {
 
     long id;
-    private String name, artist;
+    private MediaMetadataCompat mediaMetadata;
     private long duration;
     private Uri uri;
 
     public Audio() {}
 
-    public Audio(long id, String name, String artist, long duration, Uri uri) {
+    public Audio(long id, MediaMetadataCompat mediaMetadata, long duration, Uri uri) {
         this.id = id;
-        this.name = name;
-        this.artist = artist;
+        this.mediaMetadata = mediaMetadata;
         this.duration = duration;
         this.uri = uri;
     }
@@ -47,20 +47,12 @@ public class Audio {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public MediaMetadataCompat getMediaMetadata() {
+        return mediaMetadata;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getArtist() {
-        return artist;
-    }
-
-    public void setArtist(String artist) {
-        this.artist = artist;
+    public void setMediaMetadata(MediaMetadataCompat mediaMetadata) {
+        this.mediaMetadata = mediaMetadata;
     }
 
     public long getDuration() {
@@ -85,12 +77,8 @@ public class Audio {
         return "Audio{"
                 + "id="
                 + id
-                + ", name='"
-                + name
-                + '\''
-                + ", artist='"
-                + artist
-                + '\''
+                + ", mediaMetadata="
+                + mediaMetadata
                 + ", duration="
                 + duration
                 + ", uri="

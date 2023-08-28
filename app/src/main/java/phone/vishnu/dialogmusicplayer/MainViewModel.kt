@@ -46,12 +46,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun getSaveItem(audio: Audio): MutableLiveData<SaveItem> {
-        val mutableLiveData: MutableLiveData<SaveItem> = MutableLiveData(SaveItem(audio.getId(), 0))
+    fun getSaveItem(id: Long): MutableLiveData<SaveItem> {
+        val mutableLiveData: MutableLiveData<SaveItem> = MutableLiveData(SaveItem(id, 0))
 
         viewModelScope.launch(Dispatchers.IO) {
 
-            val saveItem = repository?.getSaveItem(audio.getId())
+            val saveItem = repository?.getSaveItem(id)
 
             if (saveItem != null)
                 mutableLiveData.postValue(saveItem)

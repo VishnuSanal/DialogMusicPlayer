@@ -3,6 +3,7 @@
 	package="phone.vishnu.dialogmusicplayer">
 
 	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+	<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
 	<application
 		android:icon="@drawable/ic_icon"
@@ -38,6 +39,14 @@
 			</intent-filter>
 
 		</activity>
+
+		<service
+			android:name=".MediaPlaybackService"
+			android:exported="true">
+			<intent-filter>
+				<action android:name="android.media.browse.MediaBrowserService" />
+			</intent-filter>
+		</service>
 
 	</application>
 
