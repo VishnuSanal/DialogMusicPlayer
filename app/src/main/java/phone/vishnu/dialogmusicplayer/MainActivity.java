@@ -158,11 +158,14 @@ public class MainActivity extends AppCompatActivity {
 
         if (getIntent().getBooleanExtra(QUIT_KEY, false)) finishAffinity();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO)
-                    == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
-            else requestPermissions(new String[] {Manifest.permission.READ_MEDIA_AUDIO}, 0);
-        else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+                    == PackageManager.PERMISSION_GRANTED &&
+                    checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                    == PackageManager.PERMISSION_GRANTED)
+                initTasks(getIntent());
+            else requestPermissions(new String[] {Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS}, 0);
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
             if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
                     == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
             else requestPermissions(new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
