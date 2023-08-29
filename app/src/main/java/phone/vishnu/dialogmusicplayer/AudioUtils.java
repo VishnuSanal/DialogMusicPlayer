@@ -23,7 +23,9 @@ import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.BitmapFactory;
 import android.media.MediaMetadata;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
@@ -31,7 +33,11 @@ import android.provider.MediaStore;
 import android.support.v4.media.MediaMetadataCompat;
 import androidx.annotation.AnyRes;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import java.io.IOException;
 import java.net.URLDecoder;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class AudioUtils {
@@ -40,7 +46,16 @@ public class AudioUtils {
 
         try {
 
-            Audio audio = fetchMetadata(context, duration, uri);
+            Audio audio;
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+
+                audio = retrieveMetadata(context, duration, uri);
+
+                if (audio != null) return audio;
+            }
+
+            audio = fetchMetadata(context, duration, uri);
 
             if (audio != null) return audio;
 
@@ -56,16 +71,18 @@ public class AudioUtils {
 
             if (audio != null) return audio;
 
-        } catch (IllegalArgumentException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
+
+        String name = extractName(uri);
 
         return new Audio(
                 -1,
                 new MediaMetadataCompat.Builder()
                         .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, "-1")
-                        .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, extractName(uri))
-                        .putString(MediaMetadata.METADATA_KEY_TITLE, extractName(uri))
+                        .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
+                        .putString(MediaMetadata.METADATA_KEY_TITLE, name)
                         .putString(MediaMetadata.METADATA_KEY_ARTIST, "<Unknown Artist>")
                         .putLong(MediaMetadata.METADATA_KEY_DURATION, Long.parseLong(duration))
                         .putString(
@@ -74,6 +91,95 @@ public class AudioUtils {
                         .build(),
                 Long.parseLong(duration),
                 uri);
+    }
+
+    @Nullable
+    @RequiresApi(api = Build.VERSION_CODES.Q)
+    private static Audio retrieveMetadata(Context context, String duration, Uri uri) {
+
+        try {
+            MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
+
+            mediaMetadataRetriever.setDataSource(context, uri);
+
+            byte[] picture = mediaMetadataRetriever.getEmbeddedPicture();
+
+            long id = extractId(context, duration, uri);
+
+            Audio audio =
+                    new Audio(
+                            id,
+                            new MediaMetadataCompat.Builder()
+                                    .putString(
+                                            MediaMetadata.METADATA_KEY_MEDIA_ID, String.valueOf(id))
+                                    .putString(
+                                            MediaMetadata.METADATA_KEY_DISPLAY_TITLE,
+                                            mediaMetadataRetriever.extractMetadata(
+                                                    MediaMetadataRetriever.METADATA_KEY_TITLE))
+                                    .putString(
+                                            MediaMetadata.METADATA_KEY_TITLE,
+                                            mediaMetadataRetriever.extractMetadata(
+                                                    MediaMetadataRetriever.METADATA_KEY_TITLE))
+                                    .putString(
+                                            MediaMetadata.METADATA_KEY_ARTIST,
+                                            mediaMetadataRetriever.extractMetadata(
+                                                    MediaMetadataRetriever.METADATA_KEY_ARTIST))
+                                    .putLong(
+                                            MediaMetadata.METADATA_KEY_DURATION,
+                                            Long.parseLong(duration))
+                                    .putBitmap(
+                                            MediaMetadata.METADATA_KEY_ALBUM_ART,
+                                            BitmapFactory.decodeByteArray(
+                                                    picture,
+                                                    0,
+                                                    Objects.requireNonNull(picture).length))
+                                    .build(),
+                            Long.parseLong(duration),
+                            uri);
+
+            mediaMetadataRetriever.close();
+
+            return audio;
+
+        } catch (IOException | IllegalStateException | NullPointerException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    private static long extractId(Context context, String duration, Uri uri) {
+
+        Cursor cursor =
+                context.getApplicationContext()
+                        .getContentResolver()
+                        .query(
+                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+                                        ? MediaStore.Audio.Media.getContentUri(
+                                                MediaStore.VOLUME_EXTERNAL)
+                                        : MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                                new String[] {
+                                    MediaStore.Audio.Media._ID,
+                                },
+                                MediaStore.Audio.Media.DURATION + " = ?",
+                                new String[] {duration},
+                                null);
+
+        if (cursor == null) return -1;
+
+        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID);
+
+        //noinspection LoopStatementThatDoesntLoop
+        while (cursor.moveToNext()) {
+
+            long id = cursor.getLong(idColumn);
+
+            cursor.close();
+
+            return id;
+        }
+
+        return -1;
     }
 
     private static Audio fetchMetadata(Context context, String duration, Uri uri)
@@ -161,7 +267,13 @@ public class AudioUtils {
 
             if (split.length == 0) return "<Unknown Title>";
 
-            return split[split.length - 1].replace("%20", " ");
+            String name = split[split.length - 1].replace("%20", " ");
+
+            int index = name.lastIndexOf(".");
+
+            if (index > -1) return name.substring(0, index);
+
+            return name;
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -176,6 +288,7 @@ public class AudioUtils {
      * @param context - context
      * @param drawableId - drawable res id
      * @return - Uri String
+     * @noinspection SameParameterValue
      */
     private static String getUriToDrawable(@NonNull Context context, @AnyRes int drawableId) {
         return ContentResolver.SCHEME_ANDROID_RESOURCE
