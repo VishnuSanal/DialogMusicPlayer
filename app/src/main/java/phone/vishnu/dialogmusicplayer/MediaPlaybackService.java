@@ -358,7 +358,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                         .setColor(
                                 ContextCompat.getColor(
                                         MediaPlaybackService.this, R.color.accentColor))
-                        .setSmallIcon(R.drawable.ic_icon)
+                        .setSmallIcon(R.drawable.icon_fg)
                         .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                         .setOnlyAlertOnce(true)
                         .setPriority(NotificationCompat.PRIORITY_LOW)
