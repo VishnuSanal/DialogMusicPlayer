@@ -20,8 +20,12 @@
 package phone.vishnu.dialogmusicplayer;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.net.Uri;
@@ -47,7 +51,7 @@ import com.google.android.material.slider.Slider;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static final String QUIT_KEY = "phone.vishnu.dialogmusicplayer.quit";
+    public static final String KILL_APP_KEY = "phone.vishnu.dialogmusicplayer.kill";
 
     private MainViewModel viewModel;
 
@@ -142,6 +146,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             };
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -156,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
-        if (getIntent().getBooleanExtra(QUIT_KEY, false)) finishAffinity();
+        registerReceiver(killReceiver, new IntentFilter(KILL_APP_KEY));
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO)
@@ -199,6 +204,12 @@ public class MainActivity extends AppCompatActivity {
             MediaControllerCompat.getMediaController(MainActivity.this)
                     .unregisterCallback(controllerCallback);
         //        mediaBrowser.disconnect();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(killReceiver);
     }
 
     @Override
@@ -516,4 +527,12 @@ public class MainActivity extends AppCompatActivity {
 
         return "-" + getFormattedTime(totalDuration - millis, false);
     }
+
+    private final BroadcastReceiver killReceiver =
+            new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    if (KILL_APP_KEY.equals(intent.getAction())) finish();
+                }
+            };
 }

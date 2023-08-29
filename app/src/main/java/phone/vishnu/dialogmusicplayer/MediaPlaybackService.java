@@ -369,10 +369,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
 
                         stopForeground(true);
 
-                        getApplication()
-                                .startActivity(
-                                        new Intent(getApplicationContext(), MainActivity.class)
-                                                .putExtra(MainActivity.QUIT_KEY, true));
+                        sendBroadcast(new Intent(MainActivity.KILL_APP_KEY));
                     }
 
                     @Override
