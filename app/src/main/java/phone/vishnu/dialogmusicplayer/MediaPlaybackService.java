@@ -213,15 +213,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                             notificationFilter.addAction(ACTION_REWIND);
                                             notificationFilter.addAction(ACTION_SEEK);
 
-                                            if (Build.VERSION.SDK_INT
-                                                    >= Build.VERSION_CODES.TIRAMISU)
-                                                registerReceiver(
-                                                        notificationReceiver,
-                                                        notificationFilter,
-                                                        RECEIVER_NOT_EXPORTED);
-                                            else
-                                                registerReceiver(
-                                                        notificationReceiver, notificationFilter);
+                                            registerReceiver(
+                                                    notificationReceiver, notificationFilter);
 
                                             audio =
                                                     AudioUtils.getMetaData(
