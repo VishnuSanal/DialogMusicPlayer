@@ -127,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
 
                     long position = state.getPosition();
 
-                    if (position < slider.getValueTo()) slider.setValue((int) position);
+                    if (position <= slider.getValueTo()) slider.setValue((int) position);
 
                     progressTV.setText(getFormattedTime(position, isTimeReversed));
 

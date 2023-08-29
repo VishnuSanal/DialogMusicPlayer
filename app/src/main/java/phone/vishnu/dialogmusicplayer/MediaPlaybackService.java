@@ -94,8 +94,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                         .setActions(
                                 PlaybackStateCompat.ACTION_PLAY
                                         | PlaybackStateCompat.ACTION_PLAY_PAUSE
-                                        | PlaybackStateCompat.ACTION_PAUSE)
-                        .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
+                                        | PlaybackStateCompat.ACTION_PAUSE
+                                        | PlaybackStateCompat.ACTION_SEEK_TO
+                                        | PlaybackStateCompat.ACTION_STOP)
                         .build());
 
         mediaSession.setCallback(
@@ -258,8 +259,10 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                             mediaSession.setPlaybackState(
                                                     new PlaybackStateCompat.Builder()
                                                             .setState(
-                                                                    PlaybackStateCompat
-                                                                            .STATE_PLAYING,
+                                                                    mediaSession
+                                                                            .getController()
+                                                                            .getPlaybackState()
+                                                                            .getState(),
                                                                     mediaPlayer
                                                                             .getCurrentPosition(),
                                                                     mediaPlayer
@@ -273,8 +276,10 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                             mediaSession.setPlaybackState(
                                                     new PlaybackStateCompat.Builder()
                                                             .setState(
-                                                                    PlaybackStateCompat
-                                                                            .STATE_PLAYING,
+                                                                    mediaSession
+                                                                            .getController()
+                                                                            .getPlaybackState()
+                                                                            .getState(),
                                                                     mediaPlayer
                                                                             .getCurrentPosition(),
                                                                     1F)
@@ -302,7 +307,12 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                     PlaybackStateCompat.STATE_PLAYING,
                                                     mediaPlayer.getCurrentPosition(),
                                                     mediaPlayer.getPlaybackParams().getSpeed())
-                                            .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
+                                            .setActions(
+                                                    PlaybackStateCompat.ACTION_PLAY
+                                                            | PlaybackStateCompat.ACTION_PLAY_PAUSE
+                                                            | PlaybackStateCompat.ACTION_PAUSE
+                                                            | PlaybackStateCompat.ACTION_SEEK_TO
+                                                            | PlaybackStateCompat.ACTION_STOP)
                                             .build());
                         } else {
                             mediaSession.setPlaybackState(
@@ -311,7 +321,12 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                     PlaybackStateCompat.STATE_PLAYING,
                                                     mediaPlayer.getCurrentPosition(),
                                                     1F)
-                                            .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
+                                            .setActions(
+                                                    PlaybackStateCompat.ACTION_PLAY
+                                                            | PlaybackStateCompat.ACTION_PLAY_PAUSE
+                                                            | PlaybackStateCompat.ACTION_PAUSE
+                                                            | PlaybackStateCompat.ACTION_SEEK_TO
+                                                            | PlaybackStateCompat.ACTION_STOP)
                                             .build());
                         }
 
@@ -333,7 +348,12 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                     PlaybackStateCompat.STATE_PAUSED,
                                                     mediaPlayer.getCurrentPosition(),
                                                     mediaPlayer.getPlaybackParams().getSpeed())
-                                            .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
+                                            .setActions(
+                                                    PlaybackStateCompat.ACTION_PLAY
+                                                            | PlaybackStateCompat.ACTION_PLAY_PAUSE
+                                                            | PlaybackStateCompat.ACTION_PAUSE
+                                                            | PlaybackStateCompat.ACTION_SEEK_TO
+                                                            | PlaybackStateCompat.ACTION_STOP)
                                             .build());
                         } else {
                             mediaSession.setPlaybackState(
@@ -342,7 +362,12 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                     PlaybackStateCompat.STATE_PAUSED,
                                                     mediaPlayer.getCurrentPosition(),
                                                     1F)
-                                            .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
+                                            .setActions(
+                                                    PlaybackStateCompat.ACTION_PLAY
+                                                            | PlaybackStateCompat.ACTION_PLAY_PAUSE
+                                                            | PlaybackStateCompat.ACTION_PAUSE
+                                                            | PlaybackStateCompat.ACTION_SEEK_TO
+                                                            | PlaybackStateCompat.ACTION_STOP)
                                             .build());
                         }
 
@@ -396,7 +421,12 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                             .getState(),
                                                     mediaPlayer.getCurrentPosition(),
                                                     speed)
-                                            .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
+                                            .setActions(
+                                                    PlaybackStateCompat.ACTION_PLAY
+                                                            | PlaybackStateCompat.ACTION_PLAY_PAUSE
+                                                            | PlaybackStateCompat.ACTION_PAUSE
+                                                            | PlaybackStateCompat.ACTION_SEEK_TO
+                                                            | PlaybackStateCompat.ACTION_STOP)
                                             .build());
                         }
                     }
@@ -411,6 +441,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
 
         mediaPlayer.setOnCompletionListener(
                 mp -> {
+                    Log.e("vishnu", "setOnCompletionListener: ");
+
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         mediaSession.setPlaybackState(
                                 new PlaybackStateCompat.Builder()
@@ -418,7 +450,12 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                 PlaybackStateCompat.STATE_STOPPED,
                                                 mediaPlayer.getCurrentPosition(),
                                                 mediaPlayer.getPlaybackParams().getSpeed())
-                                        .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
+                                        .setActions(
+                                                PlaybackStateCompat.ACTION_PLAY
+                                                        | PlaybackStateCompat.ACTION_PLAY_PAUSE
+                                                        | PlaybackStateCompat.ACTION_PAUSE
+                                                        | PlaybackStateCompat.ACTION_SEEK_TO
+                                                        | PlaybackStateCompat.ACTION_STOP)
                                         .build());
                     } else {
                         mediaSession.setPlaybackState(
@@ -427,7 +464,12 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                 PlaybackStateCompat.STATE_STOPPED,
                                                 mediaPlayer.getCurrentPosition(),
                                                 1F)
-                                        .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
+                                        .setActions(
+                                                PlaybackStateCompat.ACTION_PLAY
+                                                        | PlaybackStateCompat.ACTION_PLAY_PAUSE
+                                                        | PlaybackStateCompat.ACTION_PAUSE
+                                                        | PlaybackStateCompat.ACTION_SEEK_TO
+                                                        | PlaybackStateCompat.ACTION_STOP)
                                         .build());
                     }
 
