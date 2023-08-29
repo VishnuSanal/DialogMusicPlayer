@@ -19,6 +19,7 @@
 
 package phone.vishnu.dialogmusicplayer;
 
+import android.media.MediaMetadata;
 import android.net.Uri;
 import android.support.v4.media.MediaMetadataCompat;
 import androidx.annotation.NonNull;
@@ -74,15 +75,27 @@ public class Audio {
     @NonNull
     @Override
     public String toString() {
-        return "Audio{"
-                + "id="
+        return "Audio["
+                + "\nid: "
                 + id
-                + ", mediaMetadata="
-                + mediaMetadata
-                + ", duration="
+                + "\nMETADATA_KEY_MEDIA_ID: " +
+                mediaMetadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID) +
+                "\nMETADATA_KEY_DISPLAY_TITLE: " +
+                mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE) +
+                "\nMETADATA_KEY_TITLE: " +
+                mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE) +
+                "\nMETADATA_KEY_ARTIST: " +
+                mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST) +
+                "\nMETADATA_KEY_DURATION: " +
+                mediaMetadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION) +
+                "\nMETADATA_KEY_ALBUM_ART_URI: " +
+                mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI) +
+                "\nMETADATA_KEY_ALBUM_ART: " +
+                mediaMetadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART)
+                + "\nduration: "
                 + duration
-                + ", uri="
+                + "\nuri: "
                 + uri
-                + '}';
+                + "\n]";
     }
 }

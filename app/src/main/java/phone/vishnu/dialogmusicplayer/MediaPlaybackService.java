@@ -229,6 +229,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                                     mediaPlayer.getDuration()),
                                                             uri);
 
+                                            Log.e("vishnu", "onPlayFromUri(): " + audio);
+
                                             mediaSession.setMetadata(audio.getMediaMetadata());
 
                                             updateHandler.postDelayed(updateRunnable, 0);
