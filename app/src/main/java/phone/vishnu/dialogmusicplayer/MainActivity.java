@@ -121,9 +121,11 @@ public class MainActivity extends AppCompatActivity {
                 public void onPlaybackStateChanged(PlaybackStateCompat state) {
                     super.onPlaybackStateChanged(state);
 
-                    slider.setValue((int) state.getPosition());
+                    long position = state.getPosition();
 
-                    progressTV.setText(getFormattedTime(state.getPosition(), isTimeReversed));
+                    if (position < slider.getValueTo()) slider.setValue((int) position);
+
+                    progressTV.setText(getFormattedTime(position, isTimeReversed));
 
                     if (state.getState() == PlaybackStateCompat.STATE_PLAYING)
                         playPauseButton.setImageResource(R.drawable.ic_pause);
