@@ -87,7 +87,7 @@ public class AudioUtils {
                         .putLong(MediaMetadata.METADATA_KEY_DURATION, Long.parseLong(duration))
                         .putString(
                                 MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
-                                getUriToDrawable(context, R.drawable.ic_icon))
+                                getUriToDrawable(context, R.drawable.ic_music_note))
                         .build(),
                 Long.parseLong(duration),
                 uri);
