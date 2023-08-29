@@ -19,6 +19,7 @@
 
 package phone.vishnu.dialogmusicplayer;
 
+import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
@@ -28,6 +29,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
 import android.support.v4.media.MediaMetadataCompat;
+import androidx.annotation.AnyRes;
+import androidx.annotation.NonNull;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class AudioUtils {
@@ -61,8 +64,12 @@ public class AudioUtils {
                 new MediaMetadataCompat.Builder()
                         .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, "-1")
                         .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, extractName(uri))
+                        .putString(MediaMetadata.METADATA_KEY_TITLE, extractName(uri))
                         .putString(MediaMetadata.METADATA_KEY_ARTIST, "<Unknown Artist>")
                         .putLong(MediaMetadata.METADATA_KEY_DURATION, Long.parseLong(duration))
+                        .putString(
+                                MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
+                                getUriToDrawable(context, R.drawable.ic_icon))
                         .build(),
                 Long.parseLong(duration),
                 uri);
@@ -130,8 +137,12 @@ public class AudioUtils {
                     new MediaMetadataCompat.Builder()
                             .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, String.valueOf(id))
                             .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
+                            .putString(MediaMetadata.METADATA_KEY_TITLE, name)
                             .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
                             .putLong(MediaMetadata.METADATA_KEY_DURATION, Long.parseLong(duration))
+                            .putString(
+                                    MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
+                                    "content://media/external/audio/media/" + id + "/albumart")
                             .build(),
                     d,
                     contentUri);
@@ -147,5 +158,22 @@ public class AudioUtils {
         if (split.length == 0) split = new String[] {"<Unknown Title>"};
 
         return split[split.length - 1];
+    }
+
+    /**
+     * <a href="https://stackoverflow.com/a/36062748/9652621"/></a>
+     *
+     * @param context - context
+     * @param drawableId - drawable res id
+     * @return - Uri String
+     */
+    private static String getUriToDrawable(@NonNull Context context, @AnyRes int drawableId) {
+        return ContentResolver.SCHEME_ANDROID_RESOURCE
+                + "://"
+                + context.getResources().getResourcePackageName(drawableId)
+                + '/'
+                + context.getResources().getResourceTypeName(drawableId)
+                + '/'
+                + context.getResources().getResourceEntryName(drawableId);
     }
 }

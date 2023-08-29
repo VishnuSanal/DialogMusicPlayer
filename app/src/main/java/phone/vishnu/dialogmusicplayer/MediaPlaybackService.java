@@ -30,8 +30,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.media.AudioAttributes;
 import android.media.AudioFocusRequest;
 import android.media.AudioManager;
@@ -40,7 +38,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.MediaStore;
 import android.service.media.MediaBrowserService;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
@@ -98,6 +95,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                 PlaybackStateCompat.ACTION_PLAY
                                         | PlaybackStateCompat.ACTION_PLAY_PAUSE
                                         | PlaybackStateCompat.ACTION_PAUSE)
+                        .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
                         .build());
 
         mediaSession.setCallback(
@@ -180,6 +178,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                                         mediaPlayer
                                                                                 .getPlaybackParams()
                                                                                 .getSpeed())
+                                                                .setActions(
+                                                                        PlaybackStateCompat
+                                                                                .ACTION_SEEK_TO)
                                                                 .build());
                                             } else {
                                                 mediaSession.setPlaybackState(
@@ -190,6 +191,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                                         mediaPlayer
                                                                                 .getCurrentPosition(),
                                                                         1F)
+                                                                .setActions(
+                                                                        PlaybackStateCompat
+                                                                                .ACTION_SEEK_TO)
                                                                 .build());
                                             }
 
@@ -259,6 +263,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                                     mediaPlayer
                                                                             .getPlaybackParams()
                                                                             .getSpeed())
+                                                            .setActions(
+                                                                    PlaybackStateCompat
+                                                                            .ACTION_SEEK_TO)
                                                             .build());
                                         } else {
                                             mediaSession.setPlaybackState(
@@ -269,6 +276,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                                     mediaPlayer
                                                                             .getCurrentPosition(),
                                                                     1F)
+                                                            .setActions(
+                                                                    PlaybackStateCompat
+                                                                            .ACTION_SEEK_TO)
                                                             .build());
                                         }
 
@@ -290,6 +300,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                     PlaybackStateCompat.STATE_PLAYING,
                                                     mediaPlayer.getCurrentPosition(),
                                                     mediaPlayer.getPlaybackParams().getSpeed())
+                                            .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
                                             .build());
                         } else {
                             mediaSession.setPlaybackState(
@@ -298,6 +309,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                     PlaybackStateCompat.STATE_PLAYING,
                                                     mediaPlayer.getCurrentPosition(),
                                                     1F)
+                                            .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
                                             .build());
                         }
 
@@ -319,6 +331,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                     PlaybackStateCompat.STATE_PAUSED,
                                                     mediaPlayer.getCurrentPosition(),
                                                     mediaPlayer.getPlaybackParams().getSpeed())
+                                            .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
                                             .build());
                         } else {
                             mediaSession.setPlaybackState(
@@ -327,6 +340,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                     PlaybackStateCompat.STATE_PAUSED,
                                                     mediaPlayer.getCurrentPosition(),
                                                     1F)
+                                            .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
                                             .build());
                         }
 
@@ -383,6 +397,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                             .getState(),
                                                     mediaPlayer.getCurrentPosition(),
                                                     speed)
+                                            .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
                                             .build());
                         }
                     }
@@ -404,6 +419,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                 PlaybackStateCompat.STATE_STOPPED,
                                                 mediaPlayer.getCurrentPosition(),
                                                 mediaPlayer.getPlaybackParams().getSpeed())
+                                        .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
                                         .build());
                     } else {
                         mediaSession.setPlaybackState(
@@ -412,6 +428,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                                                 PlaybackStateCompat.STATE_STOPPED,
                                                 mediaPlayer.getCurrentPosition(),
                                                 1F)
+                                        .setActions(PlaybackStateCompat.ACTION_SEEK_TO)
                                         .build());
                     }
 
@@ -467,21 +484,6 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                     .createNotificationChannel(notificationChannel);
         }
 
-        Bitmap albumArt;
-
-        try {
-            albumArt =
-                    MediaStore.Images.Media.getBitmap(
-                            getContentResolver(),
-                            Uri.parse(
-                                    "content://media/external/audio/media/"
-                                            + audio.getId()
-                                            + "/albumart"));
-        } catch (IOException | UnsupportedOperationException e) {
-            albumArt = BitmapFactory.decodeResource(getResources(), R.drawable.ic_icon);
-            e.printStackTrace();
-        }
-
         // https://stackoverflow.com/questions/63501425/java-android-media-player-notification
         NotificationCompat.Builder builder =
                 new NotificationCompat.Builder(MediaPlaybackService.this, "DMPChannel")
@@ -515,7 +517,6 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                         .setContentText(
                                 audio.getMediaMetadata()
                                         .getText(MediaMetadataCompat.METADATA_KEY_ARTIST))
-                        .setLargeIcon(albumArt)
                         .setAutoCancel(false)
                         .setDeleteIntent(
                                 MediaButtonReceiver.buildMediaButtonPendingIntent(
