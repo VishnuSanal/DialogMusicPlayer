@@ -63,6 +63,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
     private static final int REQUEST_CODE = 200;
 
     private static final String ACTION_PLAY_PAUSE = "phone.vishnu.dialogmusicplayer.playPause";
+    private static final String ACTION_REPLAY = "phone.vishnu.dialogmusicplayer.replay";
     private static final String ACTION_CANCEL = "phone.vishnu.dialogmusicplayer.cancel";
     private static final String ACTION_REWIND = "phone.vishnu.dialogmusicplayer.rewind";
     private static final String ACTION_SEEK = "phone.vishnu.dialogmusicplayer.seek";
@@ -138,6 +139,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
 
                                             IntentFilter notificationFilter = new IntentFilter();
                                             notificationFilter.addAction(ACTION_PLAY_PAUSE);
+                                            notificationFilter.addAction(ACTION_REPLAY);
                                             notificationFilter.addAction(ACTION_CANCEL);
                                             notificationFilter.addAction(ACTION_REWIND);
                                             notificationFilter.addAction(ACTION_SEEK);
@@ -287,9 +289,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
 
         mediaPlayer.setOnCompletionListener(
                 mp -> {
-                    Log.e("vishnu", "setOnCompletionListener: ");
-
                     setPlaybackState(PlaybackStateCompat.STATE_STOPPED, -1);
+
+                    startForeground(NOTIFICATION_ID, getNotification());
 
                     int state = mediaSession.getController().getRepeatMode();
 
@@ -387,15 +389,21 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                                         getPendingIntent(ACTION_REWIND)))
                         .addAction(
                                 mediaSession.getController().getPlaybackState().getState()
-                                                == PlaybackStateCompat.STATE_PLAYING
+                                                == PlaybackStateCompat.STATE_STOPPED
                                         ? new NotificationCompat.Action(
-                                                R.drawable.ic_pause,
-                                                "Pause",
-                                                getPendingIntent(ACTION_PLAY_PAUSE))
-                                        : new NotificationCompat.Action(
-                                                R.drawable.ic_play,
-                                                "Play",
-                                                getPendingIntent(ACTION_PLAY_PAUSE)))
+                                                R.drawable.ic_replay,
+                                                "Replay",
+                                                getPendingIntent(ACTION_REPLAY))
+                                        : mediaSession.getController().getPlaybackState().getState()
+                                                        == PlaybackStateCompat.STATE_PLAYING
+                                                ? new NotificationCompat.Action(
+                                                        R.drawable.ic_pause,
+                                                        "Pause",
+                                                        getPendingIntent(ACTION_PLAY_PAUSE))
+                                                : new NotificationCompat.Action(
+                                                        R.drawable.ic_play,
+                                                        "Play",
+                                                        getPendingIntent(ACTION_PLAY_PAUSE)))
                         .addAction(
                                 new NotificationCompat.Action(
                                         R.drawable.ic_seek, "Seek", getPendingIntent(ACTION_SEEK)))
@@ -505,7 +513,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                     mediaSession.getController().getTransportControls().play();
 
                 startForeground(NOTIFICATION_ID, getNotification());
-            } else if (ACTION_CANCEL.equals(intent.getAction()))
+            } else if (ACTION_REPLAY.equals(intent.getAction()))
+                mediaSession.getController().getTransportControls().play();
+            else if (ACTION_CANCEL.equals(intent.getAction()))
                 mediaSession.getController().getTransportControls().stop();
             else if (ACTION_REWIND.equals(intent.getAction()))
                 mediaSession
