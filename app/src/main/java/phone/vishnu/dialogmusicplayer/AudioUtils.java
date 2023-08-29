@@ -31,6 +31,7 @@ import android.provider.MediaStore;
 import android.support.v4.media.MediaMetadataCompat;
 import androidx.annotation.AnyRes;
 import androidx.annotation.NonNull;
+import java.net.URLDecoder;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class AudioUtils {
@@ -152,12 +153,21 @@ public class AudioUtils {
     }
 
     private static String extractName(Uri uri) {
+        try {
 
-        String[] split = uri.getLastPathSegment().split("/");
+            String lastPathSegment = uri.getLastPathSegment();
 
-        if (split.length == 0) split = new String[] {"<Unknown Title>"};
+            String[] split = URLDecoder.decode(lastPathSegment, "UTF-8").split("/");
 
-        return split[split.length - 1];
+            if (split.length == 0) return "<Unknown Title>";
+
+            return split[split.length - 1].replace("%20", " ");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return "<Unknown Title>";
     }
 
     /**
