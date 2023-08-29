@@ -475,9 +475,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
 
             NotificationChannel notificationChannel =
                     new NotificationChannel(
-                            "DMPChannel",
-                            "DialogMusicPlayer",
-                            NotificationManager.IMPORTANCE_DEFAULT);
+                            "DMPChannel", "DialogMusicPlayer", NotificationManager.IMPORTANCE_LOW);
             notificationChannel.setDescription(
                     "Default notification channel for DialogMusicPlayer");
             notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
@@ -504,6 +502,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                         .setSmallIcon(R.drawable.ic_icon)
                         .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                         .setOnlyAlertOnce(true)
+                        .setPriority(NotificationCompat.PRIORITY_LOW)
                         .setContentIntent(
                                 PendingIntent.getActivity(
                                         this,
@@ -523,6 +522,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
                         .setDeleteIntent(
                                 MediaButtonReceiver.buildMediaButtonPendingIntent(
                                         this, PlaybackStateCompat.ACTION_STOP))
+                        .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
                         .addAction(
                                 new NotificationCompat.Action(
                                         R.drawable.ic_rewind,
