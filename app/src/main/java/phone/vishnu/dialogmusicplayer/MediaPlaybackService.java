@@ -356,8 +356,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                                                         PlaybackStateCompat.ACTION_STOP))
                                         .setShowActionsInCompactView(0, 1, 2))
                         .setColor(
-                                ContextCompat.getColor(
-                                        MediaPlaybackService.this, R.color.accentColor))
+                                ContextCompat.getColor(MediaPlaybackService.this, R.color.BGColor))
                         .setSmallIcon(R.drawable.icon_fg)
                         .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                         .setOnlyAlertOnce(true)
@@ -382,6 +381,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                                 MediaButtonReceiver.buildMediaButtonPendingIntent(
                                         this, PlaybackStateCompat.ACTION_STOP))
                         .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+                        .setLargeIcon(
+                                audio.getMediaMetadata()
+                                        .getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART))
                         .addAction(
                                 new NotificationCompat.Action(
                                         R.drawable.ic_rewind,
