@@ -39,6 +39,7 @@ import android.support.v4.media.session.PlaybackStateCompat;
 import android.text.TextUtils;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -58,7 +59,7 @@ public class MainActivity extends AppCompatActivity {
     private MediaBrowserCompat mediaBrowser;
 
     private Slider slider;
-    private ImageView playPauseButton, repeatIV, rewindIV, seekIV;
+    private ImageView playPauseButton, repeatIV, rewindIV, seekIV, albumArtIV;
     private TextView fileNameTV, artistNameTV, progressTV, durationTV, playbackSpeedTV;
 
     private boolean isTimeReversed = false;
@@ -87,6 +88,8 @@ public class MainActivity extends AppCompatActivity {
                     fileNameTV.setText(
                             metadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE));
                     artistNameTV.setText(metadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST));
+                    albumArtIV.setImageBitmap(
+                            metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART));
 
                     totalDuration =
                             (int) metadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION);
@@ -155,8 +158,6 @@ public class MainActivity extends AppCompatActivity {
 
         FileUtils.clearApplicationData(getApplicationContext()); // fix for an old mistake ;_;
 
-        setScreenWidth();
-
         initViews();
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
@@ -190,6 +191,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onResume() {
         super.onResume();
+
+        initScreen();
+
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
 
         if (MediaControllerCompat.getMediaController(MainActivity.this) != null)
@@ -379,7 +383,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        setScreenWidth();
         slider = findViewById(R.id.slider);
         playPauseButton = findViewById(R.id.playPauseButton);
         fileNameTV = findViewById(R.id.fileNameTV);
@@ -389,6 +392,7 @@ public class MainActivity extends AppCompatActivity {
         repeatIV = findViewById(R.id.repeatButton);
         rewindIV = findViewById(R.id.rewindButton);
         seekIV = findViewById(R.id.seekButton);
+        albumArtIV = findViewById(R.id.albumArtIV);
         playbackSpeedTV = findViewById(R.id.playbackSpeedButton);
         setTextViewScrollingBehaviour();
         setListeners();
@@ -490,13 +494,17 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
-    private void setScreenWidth() {
+    private void initScreen() {
         this.setFinishOnTouchOutside(false);
 
         getWindow()
+                .getDecorView()
+                .setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+
+        getWindow()
                 .setLayout(
-                        (int) (getResources().getDisplayMetrics().widthPixels * 0.90),
-                        ViewGroup.LayoutParams.WRAP_CONTENT);
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
     }
 
     private void setTextViewScrollingBehaviour() {

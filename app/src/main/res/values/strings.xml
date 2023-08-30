@@ -14,5 +14,6 @@
 
 	<string name="play_pause_button" translatable="false">Play Pause Button</string>
 	<string name="repeat_track_toggle" translatable="false">Repeat Track Toggle</string>
+	<string name="album_art_iv" translatable="false">Album Art IV</string>
 
 </resources>

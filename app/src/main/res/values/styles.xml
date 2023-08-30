@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-	<style name="Theme.BGDialog" parent="@style/Theme.MaterialComponents.DayNight.Dialog">
+	<style name="Theme.BGDialog" parent="@style/Theme.MaterialComponents.DayNight.NoActionBar">
 		<item name="android:windowFrame">@null</item>
 		<item name="android:windowIsFloating">true</item>
 		<item name="android:windowIsTranslucent">true</item>
@@ -12,6 +12,17 @@
 		<item name="windowActionBar">false</item>
 		<item name="windowNoTitle">true</item>
 		<item name="android:windowFullscreen">true</item>
+
+		<item name="android:windowContentOverlay">@null</item>
+
+		<item name="android:windowDrawsSystemBarBackgrounds">true</item>
+		<item name="android:statusBarColor">@color/BGColor</item>
+		<item name="android:navigationBarColor">@color/BGColor</item>
+	</style>
+
+	<style name="roundedImageView">
+		<item name="cornerFamily">rounded</item>
+		<item name="cornerSize">8dp</item>
 	</style>
 
 </resources>
