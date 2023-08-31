@@ -1,21 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
-	android:layout_height="wrap_content"
-	android:layout_gravity="center"
-	android:foregroundGravity="center"
-	app:cardBackgroundColor="@color/BGColor"
-	app:cardCornerRadius="8dp"
-	app:cardElevation="12dp"
-	app:cardUseCompatPadding="true"
+	android:layout_height="match_parent"
+	android:layout_margin="4dp"
 	tools:context=".MainActivity">
 
+	<com.google.android.material.imageview.ShapeableImageView
+		android:id="@+id/albumArtIV"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_above="@id/childConstraintLayout"
+		android:layout_centerHorizontal="true"
+		android:layout_margin="32dp"
+		android:contentDescription="@string/album_art_iv"
+		android:src="@drawable/ic_music_note"
+		app:shapeAppearanceOverlay="@style/roundedImageView" />
+
 	<androidx.constraintlayout.widget.ConstraintLayout
+		android:id="@+id/childConstraintLayout"
 		android:layout_width="match_parent"
 		android:layout_height="wrap_content"
-		android:padding="8dp">
+		android:layout_alignParentBottom="true"
+		android:background="@drawable/bottom_sheet_background"
+		android:paddingBottom="8dp">
 
 		<TextView
 			android:id="@+id/titleTV"
@@ -81,9 +90,9 @@
 			android:layout_width="match_parent"
 			android:layout_height="wrap_content"
 			android:layout_marginStart="8dp"
-			android:layout_marginTop="2dp"
+			android:layout_marginTop="16dp"
 			android:layout_marginEnd="8dp"
-			android:layout_marginBottom="4dp"
+			android:layout_marginBottom="16dp"
 			app:haloColor="@color/sliderHaloColor"
 			app:haloRadius="12dp"
 			app:layout_constraintBottom_toTopOf="@id/playPauseButton"
@@ -190,8 +199,8 @@
 
 		<ImageView
 			android:id="@+id/playPauseButton"
-			android:layout_width="48dp"
-			android:layout_height="48dp"
+			android:layout_width="64dp"
+			android:layout_height="64dp"
 			android:layout_marginStart="2dp"
 			android:layout_marginTop="2dp"
 			android:layout_marginEnd="8dp"
@@ -208,8 +217,8 @@
 
 		<ImageView
 			android:id="@+id/repeatButton"
-			android:layout_width="32dp"
-			android:layout_height="32dp"
+			android:layout_width="36dp"
+			android:layout_height="36dp"
 			android:layout_marginStart="8dp"
 			android:layout_marginTop="2dp"
 			android:layout_marginEnd="4dp"
@@ -243,6 +252,7 @@
 			android:textColor="@color/textColorLight"
 			android:textSize="16sp"
 			android:textStyle="bold"
+			android:visibility="gone"
 			app:layout_constraintBottom_toBottomOf="parent"
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintHorizontal_bias="0.25"
@@ -251,4 +261,4 @@
 			app:layout_constraintVertical_bias="1" />
 
 	</androidx.constraintlayout.widget.ConstraintLayout>
-</androidx.cardview.widget.CardView>
+</RelativeLayout>
