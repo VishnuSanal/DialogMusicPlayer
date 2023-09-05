@@ -114,6 +114,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                         super.onPlayFromUri(uri, extras);
 
                         try {
+
+                            if (mediaPlayer.isPlaying()) mediaPlayer.reset();
+
                             mediaPlayer.setDataSource(MediaPlaybackService.this, uri);
                             mediaPlayer.setOnPreparedListener(
                                     mp -> {

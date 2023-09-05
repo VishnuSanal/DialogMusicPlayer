@@ -222,6 +222,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+
+        initTasks(intent);
+    }
+
+    @Override
     public void onRequestPermissionsResult(
             int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -271,45 +278,60 @@ public class MainActivity extends AppCompatActivity {
                                 "Oops! Something went wrong\n\n" + intent.getAction(),
                                 Toast.LENGTH_LONG)
                         .show();
+                finish();
                 return;
             }
 
-            mediaBrowser =
-                    new MediaBrowserCompat(
+            if (mediaBrowser == null) {
+                mediaBrowser =
+                        new MediaBrowserCompat(
+                                this,
+                                new ComponentName(this, MediaPlaybackService.class),
+                                new MediaBrowserCompat.ConnectionCallback() {
+                                    @Override
+                                    public void onConnected() {
+                                        MediaSessionCompat.Token token =
+                                                mediaBrowser.getSessionToken();
+
+                                        MediaControllerCompat mediaController =
+                                                new MediaControllerCompat(MainActivity.this, token);
+
+                                        MediaControllerCompat.setMediaController(
+                                                MainActivity.this, mediaController);
+
+                                        buildTransportControls();
+
+                                        MediaControllerCompat.getMediaController(MainActivity.this)
+                                                .getTransportControls()
+                                                .playFromUri(uri, null);
+                                    }
+
+                                    @Override
+                                    public void onConnectionSuspended() {
+                                        // The Service has crashed. Disable transport controls until
+                                        // it
+                                        // automatically reconnects
+                                    }
+
+                                    @Override
+                                    public void onConnectionFailed() {
+                                        // The Service has refused our connection
+                                    }
+                                },
+                                null);
+                mediaBrowser.connect();
+            } else
+                MediaControllerCompat.getMediaController(MainActivity.this)
+                        .getTransportControls()
+                        .playFromUri(uri, null);
+
+        } else {
+            Toast.makeText(
                             this,
-                            new ComponentName(this, MediaPlaybackService.class),
-                            new MediaBrowserCompat.ConnectionCallback() {
-                                @Override
-                                public void onConnected() {
-                                    MediaSessionCompat.Token token = mediaBrowser.getSessionToken();
-
-                                    MediaControllerCompat mediaController =
-                                            new MediaControllerCompat(MainActivity.this, token);
-
-                                    MediaControllerCompat.setMediaController(
-                                            MainActivity.this, mediaController);
-
-                                    buildTransportControls();
-
-                                    MediaControllerCompat.getMediaController(MainActivity.this)
-                                            .getTransportControls()
-                                            .playFromUri(uri, null);
-                                }
-
-                                @Override
-                                public void onConnectionSuspended() {
-                                    // The Service has crashed. Disable transport controls until it
-                                    // automatically reconnects
-                                }
-
-                                @Override
-                                public void onConnectionFailed() {
-                                    // The Service has refused our connection
-                                }
-                            },
-                            null);
-
-            mediaBrowser.connect();
+                            "Oops! Something went wrong\n\n" + intent.getAction(),
+                            Toast.LENGTH_LONG)
+                    .show();
+            finish();
         }
     }
 
