@@ -214,11 +214,12 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         unregisterReceiver(killReceiver);
 
-        mediaBrowser.disconnect();
+        if (mediaBrowser != null) mediaBrowser.disconnect();
 
         // hack!
         // can't fix notification from getting destroyed on app exit even with the music playing :(
-        MediaControllerCompat.getMediaController(this).getTransportControls().stop();
+        if (MediaControllerCompat.getMediaController(this) != null)
+            MediaControllerCompat.getMediaController(this).getTransportControls().stop();
     }
 
     @Override
