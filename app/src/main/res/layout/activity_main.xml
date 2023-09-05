@@ -2,6 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	xmlns:app="http://schemas.android.com/apk/res-auto"
 	xmlns:tools="http://schemas.android.com/tools"
+	android:id="@+id/parentRelativeLayout"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
 	android:layout_margin="4dp"
@@ -210,7 +211,7 @@
 			android:padding="4dp"
 			android:scaleType="fitXY"
 			android:src="@drawable/ic_play"
-			app:layout_constraintBottom_toTopOf="@id/quitTV"
+			app:layout_constraintBottom_toBottomOf="parent"
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintTop_toBottomOf="@id/slider"
 			app:tint="@color/accentColor" />
@@ -236,29 +237,6 @@
 			app:layout_constraintStart_toStartOf="parent"
 			app:layout_constraintTop_toTopOf="@id/playPauseButton"
 			app:tint="@color/textColorLight" />
-
-		<TextView
-			android:id="@+id/quitTV"
-			android:layout_width="0dp"
-			android:layout_height="wrap_content"
-			android:background="?attr/selectableItemBackground"
-			android:fontFamily="@font/poppins"
-			android:gravity="center"
-			android:paddingStart="8dp"
-			android:paddingTop="4dp"
-			android:paddingEnd="8dp"
-			android:paddingBottom="8dp"
-			android:text="@string/quit"
-			android:textColor="@color/textColorLight"
-			android:textSize="16sp"
-			android:textStyle="bold"
-			android:visibility="gone"
-			app:layout_constraintBottom_toBottomOf="parent"
-			app:layout_constraintEnd_toEndOf="parent"
-			app:layout_constraintHorizontal_bias="0.25"
-			app:layout_constraintStart_toStartOf="parent"
-			app:layout_constraintTop_toBottomOf="@id/playPauseButton"
-			app:layout_constraintVertical_bias="1" />
 
 	</androidx.constraintlayout.widget.ConstraintLayout>
 </RelativeLayout>

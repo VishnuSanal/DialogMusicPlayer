@@ -154,7 +154,6 @@ public class MainActivity extends AppCompatActivity {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        this.setFinishOnTouchOutside(false);
 
         FileUtils.clearApplicationData(getApplicationContext()); // fix for an old mistake ;_;
 
@@ -398,16 +397,8 @@ public class MainActivity extends AppCompatActivity {
         setListeners();
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void setListeners() {
-        findViewById(R.id.quitTV)
-                .setOnClickListener(
-                        v -> {
-                            MediaControllerCompat.getMediaController(MainActivity.this)
-                                    .getTransportControls()
-                                    .stop();
-                            finish();
-                        });
-
         progressTV.setOnClickListener(v -> isTimeReversed = !isTimeReversed);
 
         slider.setLabelFormatter(value -> getFormattedTime((long) value, isTimeReversed));
@@ -492,6 +483,24 @@ public class MainActivity extends AppCompatActivity {
                                 .setRepeatMode(PlaybackStateCompat.REPEAT_MODE_NONE);
                     }
                 });
+
+        findViewById(R.id.parentRelativeLayout)
+                .setOnTouchListener(
+                        (v, event) -> {
+                            if (event.getY() < albumArtIV.getY()
+                                    || (event.getY()
+                                                    < findViewById(R.id.childConstraintLayout)
+                                                            .getY()
+                                            && (event.getX() < albumArtIV.getX()
+                                                    || event.getX()
+                                                            > albumArtIV.getX()
+                                                                    + albumArtIV.getWidth()))) {
+                                moveTaskToBack(false);
+                                return true;
+                            }
+
+                            return false;
+                        });
     }
 
     private void initScreen() {
