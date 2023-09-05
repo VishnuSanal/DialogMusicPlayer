@@ -14,6 +14,8 @@
 	<color name="sliderInactiveColor">#A1A1A1</color>
 	<color name="sliderHaloColor">#D0E8374B</color>
 
+	<color name="notificationBGColor">#18191D</color>
+
 	<color name="white">#FFFFFF</color>
 
 </resources>

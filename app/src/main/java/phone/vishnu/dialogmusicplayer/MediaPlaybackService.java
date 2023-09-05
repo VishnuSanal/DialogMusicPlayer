@@ -356,7 +356,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                                                         PlaybackStateCompat.ACTION_STOP))
                                         .setShowActionsInCompactView(0, 1, 2))
                         .setColor(
-                                ContextCompat.getColor(MediaPlaybackService.this, R.color.BGColor))
+                                ContextCompat.getColor(
+                                        MediaPlaybackService.this, R.color.notificationBGColor))
                         .setSmallIcon(R.drawable.icon_fg)
                         .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                         .setOnlyAlertOnce(true)
