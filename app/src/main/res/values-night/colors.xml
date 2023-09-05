@@ -2,9 +2,7 @@
 <resources>
 
 	<color name="BGColor">#18191D</color>
-
-	<color name="textColor">#FFFFFF</color>
-
+	<color name="textColor">@color/white</color>
 	<color name="textColorLight">#E7E5E5</color>
 
 </resources>

@@ -2,20 +2,19 @@
 <resources>
 
 	<color name="BGColor">#FFFFFF</color>
-	<color name="textColor">#000000</color>
-
-	<color name="accentColor">#E8374B</color>
-
+	<color name="textColor">@color/black</color>
 	<color name="textColorLight">#434343</color>
 
-	<color name="rewindSeekButtonColor">@color/sliderHaloColor</color>
+	<color name="accentColor">#E8374B</color>
 
 	<color name="sliderActiveColor">@color/accentColor</color>
 	<color name="sliderInactiveColor">#A1A1A1</color>
 	<color name="sliderHaloColor">#D0E8374B</color>
 
+	<color name="rewindSeekButtonColor">@color/sliderHaloColor</color>
 	<color name="notificationBGColor">#18191D</color>
 
 	<color name="white">#FFFFFF</color>
+	<color name="black">#000000</color>
 
 </resources>

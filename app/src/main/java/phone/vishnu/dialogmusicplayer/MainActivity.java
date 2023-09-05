@@ -27,6 +27,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
@@ -393,8 +394,29 @@ public class MainActivity extends AppCompatActivity {
         seekIV = findViewById(R.id.seekButton);
         albumArtIV = findViewById(R.id.albumArtIV);
         playbackSpeedTV = findViewById(R.id.playbackSpeedButton);
+        initColors();
         setTextViewScrollingBehaviour();
         setListeners();
+    }
+
+    private void initColors() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Log.e("vishnu", "isDynamicColorAvailable()");
+
+            int colorAccent = ColorUtils.getAccentColor(this);
+
+            int colorAccentLight = ColorUtils.getAccentColorLight(this);
+
+            playPauseButton.setColorFilter(colorAccent);
+
+            rewindIV.setColorFilter(colorAccentLight);
+            seekIV.setColorFilter(colorAccentLight);
+
+            slider.setThumbStrokeColor(ColorStateList.valueOf(colorAccent));
+            slider.setTrackActiveTintList(ColorStateList.valueOf(colorAccent));
+
+            slider.setHaloTintList(ColorStateList.valueOf(colorAccentLight));
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -414,7 +436,7 @@ public class MainActivity extends AppCompatActivity {
 
                     if (speed == 0.5F) {
                         playbackSpeedTV.setText(R.string.zero_seven_five_x);
-                        playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
+                        playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this));
                         MediaControllerCompat.getMediaController(MainActivity.this)
                                 .getTransportControls()
                                 .setPlaybackSpeed((0.75F));
@@ -427,25 +449,25 @@ public class MainActivity extends AppCompatActivity {
                                 .setPlaybackSpeed((1F));
                     } else if (speed == 1.0F) {
                         playbackSpeedTV.setText(R.string.one_two_five_x);
-                        playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
+                        playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this));
                         MediaControllerCompat.getMediaController(MainActivity.this)
                                 .getTransportControls()
                                 .setPlaybackSpeed((1.25F));
                     } else if (speed == 1.25F) {
                         playbackSpeedTV.setText(R.string.one_five_x);
-                        playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
+                        playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this));
                         MediaControllerCompat.getMediaController(MainActivity.this)
                                 .getTransportControls()
                                 .setPlaybackSpeed((1.5F));
                     } else if (speed == 1.5F) {
                         playbackSpeedTV.setText(R.string.two_x);
-                        playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
+                        playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this));
                         MediaControllerCompat.getMediaController(MainActivity.this)
                                 .getTransportControls()
                                 .setPlaybackSpeed((2.0F));
                     } else if (speed == 2.0F) {
                         playbackSpeedTV.setText(R.string.zero_five_x);
-                        playbackSpeedTV.setTextColor(getResources().getColor(R.color.accentColor));
+                        playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this));
                         MediaControllerCompat.getMediaController(MainActivity.this)
                                 .getTransportControls()
                                 .setPlaybackSpeed((0.5F));
@@ -460,7 +482,7 @@ public class MainActivity extends AppCompatActivity {
 
                     if (state == PlaybackStateCompat.REPEAT_MODE_NONE) {
                         repeatIV.setImageResource(R.drawable.ic_repeat_one);
-                        repeatIV.setColorFilter(getResources().getColor(R.color.accentColor));
+                        repeatIV.setColorFilter(ColorUtils.getAccentColor(this));
 
                         MediaControllerCompat.getMediaController(MainActivity.this)
                                 .getTransportControls()
@@ -468,7 +490,7 @@ public class MainActivity extends AppCompatActivity {
 
                     } else if (state == PlaybackStateCompat.REPEAT_MODE_ONE) {
                         repeatIV.setImageResource(R.drawable.ic_repeat);
-                        repeatIV.setColorFilter(getResources().getColor(R.color.accentColor));
+                        repeatIV.setColorFilter(ColorUtils.getAccentColor(this));
 
                         MediaControllerCompat.getMediaController(MainActivity.this)
                                 .getTransportControls()
