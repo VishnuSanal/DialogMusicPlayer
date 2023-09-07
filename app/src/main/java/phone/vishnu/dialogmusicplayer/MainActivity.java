@@ -54,6 +54,8 @@ import com.google.android.material.slider.Slider;
 public class MainActivity extends AppCompatActivity {
 
     public static final String KILL_APP_KEY = "phone.vishnu.dialogmusicplayer.kill";
+    public static final String NOTIFICATION_CLICK_KEY =
+            "phone.vishnu.dialogmusicplayer.notificationClick";
 
     private MainViewModel viewModel;
 
@@ -326,7 +328,7 @@ public class MainActivity extends AppCompatActivity {
                         .getTransportControls()
                         .playFromUri(uri, null);
 
-        } else {
+        } else if (!intent.hasExtra(NOTIFICATION_CLICK_KEY)) {
             Toast.makeText(
                             this,
                             "Oops! Something went wrong\n\n" + intent.getAction(),

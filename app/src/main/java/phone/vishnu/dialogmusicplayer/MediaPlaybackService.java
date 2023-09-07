@@ -370,7 +370,9 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                                         this,
                                         REQUEST_CODE,
                                         new Intent(this, MainActivity.class)
-                                                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                                                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                                                .putExtra(
+                                                        MainActivity.NOTIFICATION_CLICK_KEY, true),
                                         PendingIntent.FLAG_CANCEL_CURRENT
                                                 | PendingIntent.FLAG_IMMUTABLE))
                         .setContentTitle("DMP")
