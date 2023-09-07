@@ -35,6 +35,7 @@ import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -253,6 +254,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
 
                         mediaSession.setActive(false);
 
+                        savePosition(mediaPlayer.getCurrentPosition(), mediaPlayer.getDuration());
+
                         mediaPlayer.release();
                         updateHandler.removeCallbacks(updateRunnable);
 
@@ -321,6 +324,25 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                 });
 
         setSessionToken(mediaSession.getSessionToken());
+    }
+
+    private void savePosition(int currentPosition, int duration) {
+
+        Log.e("vishnu", "savePosition: " + currentPosition + " / " + duration);
+
+        long id = audio.getId();
+
+        if (id == -1) return;
+
+        AsyncTask.execute(
+                () -> {
+                    SaveItemRepository saveItemRepository =
+                            new SaveItemRepository(getApplication());
+
+                    if (currentPosition != duration)
+                        saveItemRepository.insertSaveItem(new SaveItem(id, currentPosition));
+                    else saveItemRepository.deleteSaveItem(new SaveItem(id, currentPosition));
+                });
     }
 
     @Override

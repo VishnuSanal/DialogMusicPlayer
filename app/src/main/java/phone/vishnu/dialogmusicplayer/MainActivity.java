@@ -374,13 +374,6 @@ public class MainActivity extends AppCompatActivity {
                         MediaControllerCompat.getMediaController(MainActivity.this)
                                 .getTransportControls()
                                 .seekTo((int) value);
-
-                    long position = (long) slider.getValue();
-
-                    if (id != -1)
-                        if (position != slider.getValueTo())
-                            viewModel.insert(new SaveItem(id, position));
-                        else viewModel.delete(new SaveItem(id, position));
                 });
 
         rewindIV.setOnClickListener(

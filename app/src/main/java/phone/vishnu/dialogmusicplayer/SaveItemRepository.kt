@@ -33,7 +33,7 @@ class SaveItemRepository(application: Application?) {
         return saveItemDao.getSaveItem(id)
     }
 
-    suspend fun insertSaveItem(saveItem: SaveItem?) {
+    fun insertSaveItem(saveItem: SaveItem?) {
         saveItemDao.insert(saveItem)
     }
 
@@ -41,7 +41,7 @@ class SaveItemRepository(application: Application?) {
         saveItemDao.update(saveItem)
     }
 
-    suspend fun deleteSaveItem(saveItem: SaveItem?) {
+    fun deleteSaveItem(saveItem: SaveItem?) {
         saveItemDao.delete(saveItem)
     }
 
