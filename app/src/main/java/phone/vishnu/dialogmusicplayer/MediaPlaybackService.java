@@ -248,13 +248,13 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                     @Override
                     public void onStop() {
 
+                        savePosition();
+
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                             ((AudioManager) getSystemService(Context.AUDIO_SERVICE))
                                     .abandonAudioFocusRequest(audioFocusRequest);
 
                         mediaSession.setActive(false);
-
-                        savePosition(mediaPlayer.getCurrentPosition(), mediaPlayer.getDuration());
 
                         mediaPlayer.release();
                         updateHandler.removeCallbacks(updateRunnable);
@@ -326,13 +326,18 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
         setSessionToken(mediaSession.getSessionToken());
     }
 
-    private void savePosition(int currentPosition, int duration) {
+    private void savePosition() {
 
-        Log.e("vishnu", "savePosition: " + currentPosition + " / " + duration);
+        Log.e("vishnu", "savePosition() called");
 
         long id = audio.getId();
 
-        if (id == -1) return;
+        if (id == -1 || !mediaSession.isActive()) return;
+
+        int currentPosition = mediaPlayer.getCurrentPosition();
+        int duration = mediaPlayer.getDuration();
+
+        Log.e("vishnu", "savePosition: " + currentPosition + " / " + duration);
 
         AsyncTask.execute(
                 () -> {
@@ -375,10 +380,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                                 new androidx.media.app.NotificationCompat.MediaStyle()
                                         .setMediaSession(mediaSession.getSessionToken())
                                         .setShowCancelButton(true)
-                                        .setCancelButtonIntent(
-                                                MediaButtonReceiver.buildMediaButtonPendingIntent(
-                                                        MediaPlaybackService.this,
-                                                        PlaybackStateCompat.ACTION_STOP))
+                                        .setCancelButtonIntent(getPendingIntent(ACTION_CANCEL))
                                         .setShowActionsInCompactView(0, 1, 2))
                         .setColor(
                                 ContextCompat.getColor(
