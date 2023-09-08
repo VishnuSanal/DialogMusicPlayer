@@ -116,7 +116,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
 
                         try {
 
-                            if (mediaPlayer.isPlaying()) mediaPlayer.reset();
+                            mediaPlayer.reset();
 
                             mediaPlayer.setDataSource(MediaPlaybackService.this, uri);
                             mediaPlayer.setOnPreparedListener(
