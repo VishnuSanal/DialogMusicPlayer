@@ -323,10 +323,24 @@ public class MainActivity extends AppCompatActivity {
                                 },
                                 null);
                 mediaBrowser.connect();
-            } else
+            } else {
                 MediaControllerCompat.getMediaController(MainActivity.this)
                         .getTransportControls()
                         .playFromUri(uri, null);
+
+                MediaControllerCompat.getMediaController(MainActivity.this)
+                        .getTransportControls()
+                        .setPlaybackSpeed(
+                                MediaControllerCompat.getMediaController(MainActivity.this)
+                                        .getPlaybackState()
+                                        .getPlaybackSpeed());
+
+                MediaControllerCompat.getMediaController(MainActivity.this)
+                        .getTransportControls()
+                        .setRepeatMode(
+                                MediaControllerCompat.getMediaController(MainActivity.this)
+                                        .getRepeatMode());
+            }
 
         } else if (!intent.hasExtra(NOTIFICATION_CLICK_KEY)) {
             Toast.makeText(
