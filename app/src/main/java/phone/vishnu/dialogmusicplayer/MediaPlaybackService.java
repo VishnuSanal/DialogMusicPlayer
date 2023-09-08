@@ -464,6 +464,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
      */
     private void setPlaybackState(int playbackState, float playbackSpeed) {
 
+        if (!mediaSession.isActive()) return;
+
         if (playbackState == -1)
             playbackState = mediaSession.getController().getPlaybackState().getState();
 
