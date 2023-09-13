@@ -96,6 +96,7 @@
 			android:layout_marginBottom="16dp"
 			app:haloColor="@color/sliderHaloColor"
 			app:haloRadius="12dp"
+			app:labelStyle="@style/sliderLabelStyle"
 			app:layout_constraintBottom_toTopOf="@id/playPauseButton"
 			app:layout_constraintEnd_toEndOf="parent"
 			app:layout_constraintStart_toStartOf="parent"

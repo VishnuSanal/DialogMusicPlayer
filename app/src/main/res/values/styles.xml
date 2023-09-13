@@ -25,4 +25,9 @@
 		<item name="cornerSize">8dp</item>
 	</style>
 
+	<style name="sliderLabelStyle" parent="Widget.Material3.Tooltip">
+		<item name="android:textColor">@color/BGColor</item>
+		<item name="backgroundTint">@color/textColorLight</item>
+	</style>
+
 </resources>
