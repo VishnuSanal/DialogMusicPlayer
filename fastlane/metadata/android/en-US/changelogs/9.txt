@@ -1,4 +1,0 @@
-- UI overhaul
-- Bug fixes
-
-Full Changelog: https://github.com/VishnuSanal/DialogMusicPlayer/compare/v2.0.0...v2.1.0
