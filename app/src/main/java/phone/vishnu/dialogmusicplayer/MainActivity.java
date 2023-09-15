@@ -328,12 +328,15 @@ public class MainActivity extends AppCompatActivity {
                         .getTransportControls()
                         .playFromUri(uri, null);
 
-                MediaControllerCompat.getMediaController(MainActivity.this)
-                        .getTransportControls()
-                        .setPlaybackSpeed(
-                                MediaControllerCompat.getMediaController(MainActivity.this)
-                                        .getPlaybackState()
-                                        .getPlaybackSpeed());
+                float playbackSpeed =
+                        MediaControllerCompat.getMediaController(MainActivity.this)
+                                .getPlaybackState()
+                                .getPlaybackSpeed();
+
+                if (playbackSpeed != 0)
+                    MediaControllerCompat.getMediaController(MainActivity.this)
+                            .getTransportControls()
+                            .setPlaybackSpeed(playbackSpeed);
 
                 MediaControllerCompat.getMediaController(MainActivity.this)
                         .getTransportControls()
