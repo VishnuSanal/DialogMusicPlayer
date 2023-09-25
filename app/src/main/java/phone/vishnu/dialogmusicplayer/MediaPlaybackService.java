@@ -78,7 +78,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
     private MediaPlayer mediaPlayer;
     private Audio audio;
 
-    private boolean isPlayingOnceInProgress = false;
+    private boolean isPlayingOnceInProgress = false, wasPlayingWhenLosingAudioFocus = false;
 
     @Override
     public void onCreate() {
@@ -503,14 +503,15 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
 
     @Override
     public void onAudioFocusChange(int focusChange) {
-        if (focusChange == AudioManager.AUDIOFOCUS_GAIN)
+        if (wasPlayingWhenLosingAudioFocus && focusChange == AudioManager.AUDIOFOCUS_GAIN
+                || focusChange == AudioManager.AUDIOFOCUS_GAIN_TRANSIENT) {
             mediaSession.getController().getTransportControls().play();
-        else if (focusChange == AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-            mediaSession.getController().getTransportControls().play();
-        else if (focusChange == AudioManager.AUDIOFOCUS_LOSS)
+            wasPlayingWhenLosingAudioFocus = false;
+        } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS
+                || focusChange == AUDIOFOCUS_LOSS_TRANSIENT) {
             mediaSession.getController().getTransportControls().pause();
-        else if (focusChange == AUDIOFOCUS_LOSS_TRANSIENT)
-            mediaSession.getController().getTransportControls().pause();
+            wasPlayingWhenLosingAudioFocus = mediaPlayer.isPlaying();
+        }
     }
 
     class BecomingNoisyReceiver extends BroadcastReceiver {
