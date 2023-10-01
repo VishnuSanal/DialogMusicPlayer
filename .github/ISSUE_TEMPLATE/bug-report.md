@@ -28,7 +28,7 @@ If possible, add crash logs to help us figure out the problem.
 
 **Smartphone (please complete the following information):**
  - Device: [e.g. OnePlus 8 Pro]
- - Andorid Version: [e.g. Android 10]
+ - Android Version: [e.g. Android 10]
  - App Version: [e.g. v2.6.1]
 
 **Additional context**
