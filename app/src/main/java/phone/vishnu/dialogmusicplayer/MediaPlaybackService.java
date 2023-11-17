@@ -291,6 +291,13 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
 
                         mediaSession.setRepeatMode(repeatMode);
                     }
+
+                    @Override
+                    public void onCustomAction(String action, Bundle extras) {
+                        super.onCustomAction(action, extras);
+                        notificationReceiver.onReceive(
+                                MediaPlaybackService.this, new Intent(action).putExtras(extras));
+                    }
                 });
 
         mediaPlayer.setOnCompletionListener(
@@ -484,6 +491,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                                         | PlaybackStateCompat.ACTION_PAUSE
                                         | PlaybackStateCompat.ACTION_SEEK_TO
                                         | PlaybackStateCompat.ACTION_STOP)
+                        .addCustomAction(ACTION_REWIND, "Rewind", R.drawable.ic_rewind)
+                        .addCustomAction(ACTION_SEEK, "Seek", R.drawable.ic_seek)
                         .build());
     }
 
