@@ -493,6 +493,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                                         | PlaybackStateCompat.ACTION_STOP)
                         .addCustomAction(ACTION_REWIND, "Rewind", R.drawable.ic_rewind)
                         .addCustomAction(ACTION_SEEK, "Seek", R.drawable.ic_seek)
+                        .addCustomAction(ACTION_CANCEL, "Cancel", R.drawable.ic_clear)
                         .build());
     }
 
