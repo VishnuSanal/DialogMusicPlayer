@@ -520,7 +520,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
         } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS
                 || focusChange == AUDIOFOCUS_LOSS_TRANSIENT) {
             mediaSession.getController().getTransportControls().pause();
-            wasPlayingWhenLosingAudioFocus = mediaPlayer.isPlaying();
+            wasPlayingWhenLosingAudioFocus = mediaPlayer != null && mediaPlayer.isPlaying();
         }
     }
 
