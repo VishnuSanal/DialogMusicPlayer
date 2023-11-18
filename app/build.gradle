@@ -11,8 +11,8 @@ android {
         applicationId "phone.vishnu.dialogmusicplayer"
         minSdk 21
         targetSdk 33
-        versionCode 10
-        versionName "v2.1.1"
+        versionCode 11
+        versionName "v2.1.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
