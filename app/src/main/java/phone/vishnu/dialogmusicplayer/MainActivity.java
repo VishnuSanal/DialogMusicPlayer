@@ -260,6 +260,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void finish() {
+        super.finishAndRemoveTask();
+    }
+
     private void initTasks(Intent intent) {
 
         Log.e("vishnu", "initTasks Intent#getAction: " + intent.getAction());
