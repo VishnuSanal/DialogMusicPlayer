@@ -34,13 +34,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         this.repository = SaveItemRepository(application)
     }
 
-    fun insert(saveItem: SaveItem?) {
+    fun insert(saveItem: SaveItem) {
         viewModelScope.launch(Dispatchers.IO) {
             repository?.insertSaveItem(saveItem)
         }
     }
 
-    fun delete(saveItem: SaveItem?) {
+    fun delete(saveItem: SaveItem) {
         viewModelScope.launch(Dispatchers.IO) {
             repository?.deleteSaveItem(saveItem)
         }

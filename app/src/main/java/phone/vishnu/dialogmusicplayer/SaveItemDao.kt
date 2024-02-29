@@ -31,16 +31,16 @@ import androidx.room.Update
 interface SaveItemDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insert(saveItem: SaveItem?)
+    fun insert(saveItem: SaveItem)
 
     @Update
-    fun update(saveItem: SaveItem?)
+    fun update(saveItem: SaveItem)
 
     @Delete
-    fun delete(saveItem: SaveItem?)
+    fun delete(saveItem: SaveItem)
 
     @Query("SELECT * FROM SaveItem")
-    fun getAll(): LiveData<List<SaveItem?>>
+    fun getAll(): LiveData<List<SaveItem>>
 
     @Query("DELETE FROM SaveItem")
     fun deleteAll()
