@@ -3,7 +3,6 @@ plugins {
     id 'com.google.devtools.ksp'
 }
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-kapt'
 
 android {
     compileSdk 34
