@@ -164,7 +164,10 @@ public class MainActivity extends AppCompatActivity {
 
         viewModel = new ViewModelProvider(this).get(MainViewModel.class);
 
-        registerReceiver(killReceiver, new IntentFilter(KILL_APP_KEY));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+            registerReceiver(killReceiver, new IntentFilter(KILL_APP_KEY), RECEIVER_NOT_EXPORTED);
+        else
+            registerReceiver(killReceiver, new IntentFilter(KILL_APP_KEY));
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO)

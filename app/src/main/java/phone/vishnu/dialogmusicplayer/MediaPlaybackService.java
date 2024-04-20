@@ -132,15 +132,6 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
 
                                             setPlaybackState(PlaybackStateCompat.STATE_PLAYING, -1);
 
-                                            registerReceiver(
-                                                    becomingNoisyReceiver,
-                                                    new IntentFilter(
-                                                            AudioManager
-                                                                    .ACTION_AUDIO_BECOMING_NOISY));
-                                            registerReceiver(
-                                                    mediaButtonActionReceiver,
-                                                    new IntentFilter(Intent.ACTION_MEDIA_BUTTON));
-
                                             IntentFilter notificationFilter = new IntentFilter();
                                             notificationFilter.addAction(ACTION_PLAY_PAUSE);
                                             notificationFilter.addAction(ACTION_REPLAY);
@@ -148,8 +139,37 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat
                                             notificationFilter.addAction(ACTION_REWIND);
                                             notificationFilter.addAction(ACTION_SEEK);
 
-                                            registerReceiver(
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
+                                                registerReceiver(
+                                                    becomingNoisyReceiver,
+                                                    new IntentFilter(
+                                                            AudioManager
+                                                                    .ACTION_AUDIO_BECOMING_NOISY),
+                                                        RECEIVER_NOT_EXPORTED);
+
+                                                registerReceiver(
+                                                        mediaButtonActionReceiver,
+                                                        new IntentFilter(Intent.ACTION_MEDIA_BUTTON),
+                                                        RECEIVER_NOT_EXPORTED);
+
+                                                registerReceiver(
+                                                        notificationReceiver, notificationFilter, RECEIVER_NOT_EXPORTED);
+                                            } else {
+
+                                                registerReceiver(
+                                                    becomingNoisyReceiver,
+                                                    new IntentFilter(
+                                                            AudioManager
+                                                                    .ACTION_AUDIO_BECOMING_NOISY));
+
+                                                registerReceiver(
+                                                        mediaButtonActionReceiver,
+                                                        new IntentFilter(Intent.ACTION_MEDIA_BUTTON));
+
+                                                registerReceiver(
                                                     notificationReceiver, notificationFilter);
+                                            }
 
                                             audio =
                                                     AudioUtils.getMetaData(
