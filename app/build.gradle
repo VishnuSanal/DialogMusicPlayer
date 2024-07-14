@@ -39,7 +39,7 @@ android {
 dependencies {
 
     implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.google.android.material:material:1.11.0' // v1.12.0 breaks the current design, we'll figure that out later!
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
