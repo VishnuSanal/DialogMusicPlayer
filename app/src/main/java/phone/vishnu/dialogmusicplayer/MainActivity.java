@@ -99,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
 
                     durationTV.setText(getFormattedTime(totalDuration, isTimeReversed));
 
-                    slider.setValueTo(totalDuration);
+                    if (totalDuration > 0) slider.setValueTo(totalDuration);
 
                     if (id != -1)
                         viewModel
