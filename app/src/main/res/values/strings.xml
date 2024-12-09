@@ -15,4 +15,6 @@
 	<string name="repeat_track_toggle" translatable="false">Repeat Track Toggle</string>
 	<string name="album_art_iv" translatable="false">Album Art IV</string>
 
+	<string name="title_activity_compose">ComposeActivity</string>
+
 </resources>

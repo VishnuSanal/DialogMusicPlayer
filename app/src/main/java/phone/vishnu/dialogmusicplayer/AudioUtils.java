@@ -299,4 +299,18 @@ public class AudioUtils {
                 + '/'
                 + context.getResources().getResourceEntryName(drawableId);
     }
+
+    static String getFormattedTime(long millis, long totalDuration, boolean isTimeReversed) {
+
+        long minutes = (millis / 1000) / 60;
+        long seconds = (millis / 1000) % 60;
+
+        String secondsStr = Long.toString(seconds);
+
+        String secs = (secondsStr.length() >= 2) ? secondsStr.substring(0, 2) : "0" + secondsStr;
+
+        if (!isTimeReversed) return minutes + ":" + secs;
+
+        return "-" + getFormattedTime(totalDuration - millis, totalDuration, false);
+    }
 }
