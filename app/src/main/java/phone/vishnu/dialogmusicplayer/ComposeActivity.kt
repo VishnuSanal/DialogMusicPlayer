@@ -3,6 +3,8 @@ package phone.vishnu.dialogmusicplayer
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Paint
+import android.media.MediaMetadata
+import android.net.Uri
 import android.os.Bundle
 import android.support.v4.media.MediaMetadataCompat
 import androidx.activity.ComponentActivity
@@ -18,11 +20,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,42 +76,42 @@ class ComposeActivity : ComponentActivity() {
                     containerColor = Color.Transparent,
                 ) { _ ->
 
-//                    PlayerUI(
-//                        applicationContext,
-//                        Audio(
-//                            -1,
-//                            MediaMetadataCompat.Builder().putString(
-//                                MediaMetadata.METADATA_KEY_MEDIA_ID,
-//                                "-1",
-//                            ).putString(
-//                                MediaMetadata.METADATA_KEY_DISPLAY_TITLE,
-//                                "Dreaming On",
-//                            ).putString(
-//                                MediaMetadata.METADATA_KEY_TITLE,
-//                                "Dreaming On",
-//                            ).putString(
-//                                MediaMetadata.METADATA_KEY_ARTIST,
-//                                "NEFEX",
-//                            ).putLong(
-//                                MediaMetadata.METADATA_KEY_DURATION,
-//                                100000,
-//                            ).putBitmap(
-//                                MediaMetadata.METADATA_KEY_ALBUM_ART,
-//                                null,
-//                            ).build(),
-//                            100000,
-//                            Uri.EMPTY,
-//                        ),
-//                    )
-
-                    var musicProgress by remember { mutableLongStateOf(15L) }
-                    val trackDuration = 180000L
-
-                    SemiCircularMusicSlider(
-                        progress = musicProgress,
-                        trackLength = trackDuration,
-                        onProgressChange = { musicProgress = it },
+                    PlayerUI(
+                        applicationContext,
+                        Audio(
+                            -1,
+                            MediaMetadataCompat.Builder().putString(
+                                MediaMetadata.METADATA_KEY_MEDIA_ID,
+                                "-1",
+                            ).putString(
+                                MediaMetadata.METADATA_KEY_DISPLAY_TITLE,
+                                "Dreaming On",
+                            ).putString(
+                                MediaMetadata.METADATA_KEY_TITLE,
+                                "Dreaming On",
+                            ).putString(
+                                MediaMetadata.METADATA_KEY_ARTIST,
+                                "NEFEX",
+                            ).putLong(
+                                MediaMetadata.METADATA_KEY_DURATION,
+                                100000,
+                            ).putBitmap(
+                                MediaMetadata.METADATA_KEY_ALBUM_ART,
+                                null,
+                            ).build(),
+                            100000,
+                            Uri.EMPTY,
+                        ),
                     )
+
+//                    var musicProgress by remember { mutableLongStateOf(15L) }
+//                    val trackDuration = 180000L
+//
+//                    SemiCircularMusicSlider(
+//                        progress = musicProgress,
+//                        trackLength = trackDuration,
+//                        onProgressChange = { musicProgress = it },
+//                    )
                 }
             }
         }
@@ -118,6 +120,7 @@ class ComposeActivity : ComponentActivity() {
 
 @Composable
 fun SemiCircularMusicSlider(
+    modifier: Modifier = Modifier,
     progress: Long,
     trackLength: Long,
     onProgressChange: (Long) -> Unit,
@@ -126,7 +129,7 @@ fun SemiCircularMusicSlider(
     val strokeWidth = 16f
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) {
                 detectDragGestures { _, dragAmount ->
@@ -176,19 +179,19 @@ fun SemiCircularMusicSlider(
             // draggable handle
             drawCircle(Color.Red, 24f, Offset(x.toFloat(), y.toFloat()))
 
-            // current progress
-            drawContext.canvas.nativeCanvas.apply {
-                drawText(
-                    "${progress / 1000} sec",
-                    centerX,
-                    centerY,
-                    Paint().apply {
-                        color = android.graphics.Color.WHITE
-                        textSize = 60f
-                        textAlign = Paint.Align.CENTER
-                    },
-                )
-            }
+//            // current progress
+//            drawContext.canvas.nativeCanvas.apply {
+//                drawText(
+//                    "${progress / 1000} sec",
+//                    centerX,
+//                    centerY,
+//                    Paint().apply {
+//                        color = android.graphics.Color.WHITE
+//                        textSize = 60f
+//                        textAlign = Paint.Align.CENTER
+//                    },
+//                )
+//            }
         }
     }
 }
@@ -208,7 +211,6 @@ private fun PlayerUI(context: Context, audio: Audio) {
     val totalDuration = audio.mediaMetadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION)
 
     Column(
-//        modifier = Modifier.clip(CircleShape),
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -225,52 +227,64 @@ private fun PlayerUI(context: Context, audio: Audio) {
             contentDescription = "",
         )
 
-        Column(
+        var musicProgress by remember { mutableLongStateOf(0L) }
+        val trackDuration = 180000L
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.35f)
-                .clip(RoundedCornerShape(topStartPercent = 50, topEndPercent = 50))
-                .background(MaterialTheme.colorScheme.background)
-                .padding(8.dp),
+                .wrapContentHeight()
         ) {
-            Text(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                text = context.getString(R.string.app_name),
-                textAlign = TextAlign.Center,
-                letterSpacing = 1.1.sp,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
+                    .wrapContentHeight()
+                    .align(Alignment.BottomCenter)
+                    .clip(RoundedCornerShape(topStartPercent = 100, topEndPercent = 100))
+//                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.75f))
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(top = 32.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
+            ) {
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 8.dp, top = 0.dp, end = 8.dp, bottom = 2.dp),
+                    text = context.getString(R.string.app_name),
+                    textAlign = TextAlign.Center,
+                    letterSpacing = 1.1.sp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
 
-            Text(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp, 4.dp, 8.dp, 1.dp),
-                fontFamily = poppinsFont,
-                text = audio.mediaMetadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE)
-                    .toString(),
-                maxLines = 1,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 8.dp, top = 4.dp, end = 8.dp, bottom = 1.dp),
+                    fontFamily = poppinsFont,
+                    text = audio.mediaMetadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE)
+                        .toString(),
+                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                )
 
-            Text(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp, 1.dp, 8.dp, 2.dp),
-                fontFamily = poppinsFont,
-                text = audio.mediaMetadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST)
-                    .toString(),
-                letterSpacing = 1.08.sp,
-                maxLines = 1,
-                color = MaterialTheme.colorScheme.onBackground,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 8.dp, top = 1.dp, end = 8.dp, bottom = 2.dp),
+                    fontFamily = poppinsFont,
+                    text = audio.mediaMetadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST)
+                        .toString(),
+                    letterSpacing = 1.08.sp,
+                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                )
 
 //            Slider(
 //                modifier = Modifier.padding(
@@ -287,114 +301,125 @@ private fun PlayerUI(context: Context, audio: Audio) {
 //                valueRange = 0f..totalDuration.toFloat(),
 //            )
 
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    modifier = Modifier
-                        .padding(start = 12.dp, end = 4.dp),
-                    text = AudioUtils.getFormattedTime(elapsed, totalDuration, false),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 12.sp,
-                )
-
-                Spacer(Modifier.weight(1f))
-
-                Text(
-                    modifier = Modifier
-                        .padding(start = 4.dp, end = 12.dp),
-                    text = AudioUtils.getFormattedTime(totalDuration, totalDuration, false),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 12.sp,
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                TextButton(
-                    modifier = Modifier.padding(8.dp, 4.dp, 4.dp, 4.dp),
-                    onClick = {},
-                    content = {
-                        Text(
-                            text = context.getString(R.string.one_x),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 16.sp,
-                        )
-                    },
-                )
-
-                Spacer(Modifier.weight(1f))
+//            Row(
+//                verticalAlignment = Alignment.CenterVertically,
+//                horizontalArrangement = Arrangement.SpaceBetween,
+//            ) {
+//                Text(
+//                    modifier = Modifier
+//                        .padding(start = 12.dp, end = 4.dp),
+//                    text = AudioUtils.getFormattedTime(elapsed, totalDuration, false),
+//                    color = MaterialTheme.colorScheme.onSurface,
+//                    fontSize = 12.sp,
+//                )
+//
+//                Spacer(Modifier.weight(1f))
+//
+//                Text(
+//                    modifier = Modifier
+//                        .padding(start = 4.dp, end = 12.dp),
+//                    text = AudioUtils.getFormattedTime(totalDuration, totalDuration, false),
+//                    color = MaterialTheme.colorScheme.onSurface,
+//                    fontSize = 12.sp,
+//                )
+//            }
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
-                    IconButton(
-                        modifier = Modifier
-                            .padding(8.dp, 4.dp, 8.dp, 4.dp)
-                            .size(36.dp),
+                    TextButton(
+                        modifier = Modifier.padding(8.dp, 4.dp, 4.dp, 4.dp),
                         onClick = {},
-                    ) {
-                        Icon(
-                            modifier = Modifier
-                                .size(36.dp),
-                            painter = painterResource(R.drawable.ic_rewind),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            contentDescription = "rewind icon",
-                        )
-                    }
+                        content = {
+                            Text(
+                                text = context.getString(R.string.one_x),
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontSize = 16.sp,
+                            )
+                        },
+                    )
 
-                    IconButton(
-                        modifier = Modifier
-                            .padding(4.dp, 2.dp, 4.dp, 4.dp)
-                            .size(64.dp),
-                        onClick = {},
+                    Spacer(Modifier.weight(1f))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
                     ) {
-                        Icon(
+                        IconButton(
                             modifier = Modifier
+                                .padding(8.dp, 4.dp, 8.dp, 4.dp)
+                                .size(36.dp),
+                            onClick = {},
+                        ) {
+                            Icon(
+                                modifier = Modifier
+                                    .size(36.dp),
+                                painter = painterResource(R.drawable.ic_rewind),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                contentDescription = "rewind icon",
+                            )
+                        }
+
+                        IconButton(
+                            modifier = Modifier
+                                .padding(4.dp, 2.dp, 4.dp, 4.dp)
                                 .size(64.dp),
-                            painter = painterResource(R.drawable.ic_play),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            contentDescription = "play pause icon",
-                        )
+                            onClick = {},
+                        ) {
+                            Icon(
+                                modifier = Modifier
+                                    .size(64.dp),
+                                painter = painterResource(R.drawable.ic_play),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                contentDescription = "play pause icon",
+                            )
+                        }
+
+                        IconButton(
+                            modifier = Modifier
+                                .padding(8.dp, 4.dp, 8.dp, 4.dp)
+                                .size(36.dp),
+                            onClick = {},
+                        ) {
+                            Icon(
+                                modifier = Modifier
+                                    .size(36.dp),
+                                painter = painterResource(R.drawable.ic_seek),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                contentDescription = "seek icon",
+                            )
+                        }
                     }
+
+                    Spacer(Modifier.weight(1f))
 
                     IconButton(
                         modifier = Modifier
-                            .padding(8.dp, 4.dp, 8.dp, 4.dp)
+                            .padding(4.dp, 4.dp, 8.dp, 4.dp)
                             .size(36.dp),
                         onClick = {},
                     ) {
                         Icon(
                             modifier = Modifier
                                 .size(36.dp),
-                            painter = painterResource(R.drawable.ic_seek),
+                            painter = painterResource(R.drawable.ic_repeat),
                             tint = MaterialTheme.colorScheme.onSurface,
                             contentDescription = "seek icon",
                         )
                     }
                 }
-
-                Spacer(Modifier.weight(1f))
-
-                IconButton(
-                    modifier = Modifier
-                        .padding(4.dp, 4.dp, 8.dp, 4.dp)
-                        .size(36.dp),
-                    onClick = {},
-                ) {
-                    Icon(
-                        modifier = Modifier
-                            .size(36.dp),
-                        painter = painterResource(R.drawable.ic_repeat),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        contentDescription = "seek icon",
-                    )
-                }
             }
+
+            SemiCircularMusicSlider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight()
+                    .align(Alignment.BottomCenter),
+                progress = musicProgress,
+                trackLength = trackDuration,
+                onProgressChange = { musicProgress = it },
+            )
         }
     }
 }
