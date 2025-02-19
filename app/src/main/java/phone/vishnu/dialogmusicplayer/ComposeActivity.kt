@@ -10,12 +10,10 @@ import android.support.v4.media.MediaMetadataCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -103,95 +102,8 @@ class ComposeActivity : ComponentActivity() {
                             Uri.EMPTY,
                         ),
                     )
-
-//                    var musicProgress by remember { mutableLongStateOf(15L) }
-//                    val trackDuration = 180000L
-//
-//                    SemiCircularMusicSlider(
-//                        progress = musicProgress,
-//                        trackLength = trackDuration,
-//                        onProgressChange = { musicProgress = it },
-//                    )
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun SemiCircularMusicSlider(
-    modifier: Modifier = Modifier,
-    progress: Long,
-    trackLength: Long,
-    onProgressChange: (Long) -> Unit,
-) {
-    var angle by remember { mutableFloatStateOf(-180f) }
-    val strokeWidth = 16f
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectDragGestures { _, dragAmount ->
-                    angle += dragAmount.x / 4
-                    angle = angle.coerceIn(-180f, 0f)
-                    val newProgress = ((angle + 180) / 360f * trackLength).toLong()
-                    onProgressChange(newProgress)
-                }
-            },
-    ) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp),
-        ) {
-            val centerX = size.width / 2
-            val centerY = size.height
-            val radian = Math.toRadians(angle.toDouble())
-
-            val radius = size.width / 2
-
-            val x = centerX + radius * cos(radian)
-            val y = centerY + radius * sin(radian)
-
-            // semi-circle track
-            drawArc(
-                color = Color.White,
-                startAngle = -180f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = Offset(centerX - radius, centerY - radius),
-                size = Size(radius * 2, radius * 2),
-                style = Stroke(strokeWidth),
-            )
-
-            // progress arc
-            drawArc(
-                color = Color.Black.copy(alpha = 0.75f),
-                startAngle = -180f,
-                sweepAngle = ((progress.toFloat() / trackLength) * 360f),
-                useCenter = false,
-                topLeft = Offset(centerX - radius, centerY - radius),
-                size = Size(radius * 2, radius * 2),
-                style = Stroke(strokeWidth),
-            )
-
-            // draggable handle
-            drawCircle(Color.Red, 24f, Offset(x.toFloat(), y.toFloat()))
-
-//            // current progress
-//            drawContext.canvas.nativeCanvas.apply {
-//                drawText(
-//                    "${progress / 1000} sec",
-//                    centerX,
-//                    centerY,
-//                    Paint().apply {
-//                        color = android.graphics.Color.WHITE
-//                        textSize = 60f
-//                        textAlign = Paint.Align.CENTER
-//                    },
-//                )
-//            }
         }
     }
 }
@@ -228,63 +140,118 @@ private fun PlayerUI(context: Context, audio: Audio) {
         )
 
         var musicProgress by remember { mutableLongStateOf(0L) }
-        val trackDuration = 180000L
+        var angle by remember { mutableFloatStateOf(-180f) }
+        val trackLength = 180000L
 
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
+                .clip(RoundedCornerShape(topStartPercent = 100, topEndPercent = 100))
+                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.75f))
+                .padding(top = 128.dp, bottom = 16.dp, start = 16.dp, end = 16.dp)
+                .pointerInput(Unit) {
+                    detectDragGestures { _, dragAmount ->
+                        angle += dragAmount.x / 2
+                        angle = angle.coerceIn(-180f, 0f)
+                        val newProgress = ((angle + 180) / 360f * trackLength).toLong()
+                        musicProgress = newProgress
+                    }
+                }
+                .drawBehind {
+                    val centerX = size.width / 2
+                    val centerY = size.height / 2
+                    val radian = Math.toRadians(angle.toDouble())
+
+                    val radius = (size.width / 2) - 64
+
+                    val x = centerX + radius * cos(radian)
+                    val y = centerY + radius * sin(radian)
+
+                    // semi-circle track
+                    drawArc(
+                        color = Color.White,
+                        startAngle = -180f,
+                        sweepAngle = 180f,
+                        useCenter = false,
+                        topLeft = Offset(centerX - radius, centerY - radius),
+                        size = Size(radius * 2, radius * 2),
+                        style = Stroke(2f),
+                    )
+
+                    // draggable handle
+                    drawCircle(
+                        Color.White,
+                        12f,
+                        Offset(x.toFloat(), y.toFloat()),
+                    )
+
+                    // progress
+                    drawContext.canvas.nativeCanvas.apply {
+                        drawText(
+                            "00:00",
+                            16f,
+                            centerY,
+                            Paint().apply {
+                                color = android.graphics.Color.WHITE
+                                textSize = 16f
+                                textAlign = Paint.Align.CENTER
+                            },
+                        )
+
+                        drawText(
+                            "${musicProgress / 1000}:00",
+                            size.width - 16,
+                            centerY,
+                            Paint().apply {
+                                color = android.graphics.Color.WHITE
+                                textSize = 16f
+                                textAlign = Paint.Align.CENTER
+                            },
+                        )
+                    }
+                },
         ) {
-            Column(
+            Text(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .wrapContentHeight()
-                    .align(Alignment.BottomCenter)
-                    .clip(RoundedCornerShape(topStartPercent = 100, topEndPercent = 100))
-//                    .background(MaterialTheme.colorScheme.background.copy(alpha = 0.75f))
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(top = 32.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
-            ) {
-                Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 8.dp, top = 0.dp, end = 8.dp, bottom = 2.dp),
-                    text = context.getString(R.string.app_name),
-                    textAlign = TextAlign.Center,
-                    letterSpacing = 1.1.sp,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                    .padding(start = 8.dp, top = 0.dp, end = 8.dp, bottom = 2.dp),
+                text = context.getString(R.string.app_name),
+                textAlign = TextAlign.Center,
+                letterSpacing = 1.1.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
 
-                Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 8.dp, top = 4.dp, end = 8.dp, bottom = 1.dp),
-                    fontFamily = poppinsFont,
-                    text = audio.mediaMetadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE)
-                        .toString(),
-                    maxLines = 1,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, top = 4.dp, end = 8.dp, bottom = 1.dp),
+                fontFamily = poppinsFont,
+                text = audio.mediaMetadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE)
+                    .toString(),
+                maxLines = 1,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
 
-                Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 8.dp, top = 1.dp, end = 8.dp, bottom = 2.dp),
-                    fontFamily = poppinsFont,
-                    text = audio.mediaMetadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST)
-                        .toString(),
-                    letterSpacing = 1.08.sp,
-                    maxLines = 1,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, top = 1.dp, end = 8.dp, bottom = 2.dp),
+                fontFamily = poppinsFont,
+                text = audio.mediaMetadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST)
+                    .toString(),
+                letterSpacing = 1.08.sp,
+                maxLines = 1,
+                color = MaterialTheme.colorScheme.onBackground,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+            )
 
 //            Slider(
 //                modifier = Modifier.padding(
@@ -324,102 +291,91 @@ private fun PlayerUI(context: Context, audio: Audio) {
 //                )
 //            }
 
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                TextButton(
+                    modifier = Modifier.padding(8.dp, 4.dp, 4.dp, 4.dp),
+                    onClick = {},
+                    content = {
+                        Text(
+                            text = context.getString(R.string.one_x),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            fontSize = 16.sp,
+                        )
+                    },
+                )
+
+                Spacer(Modifier.weight(1f))
+
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
-                    TextButton(
-                        modifier = Modifier.padding(8.dp, 4.dp, 4.dp, 4.dp),
-                        onClick = {},
-                        content = {
-                            Text(
-                                text = context.getString(R.string.one_x),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontSize = 16.sp,
-                            )
-                        },
-                    )
-
-                    Spacer(Modifier.weight(1f))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        IconButton(
-                            modifier = Modifier
-                                .padding(8.dp, 4.dp, 8.dp, 4.dp)
-                                .size(36.dp),
-                            onClick = {},
-                        ) {
-                            Icon(
-                                modifier = Modifier
-                                    .size(36.dp),
-                                painter = painterResource(R.drawable.ic_rewind),
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                contentDescription = "rewind icon",
-                            )
-                        }
-
-                        IconButton(
-                            modifier = Modifier
-                                .padding(4.dp, 2.dp, 4.dp, 4.dp)
-                                .size(64.dp),
-                            onClick = {},
-                        ) {
-                            Icon(
-                                modifier = Modifier
-                                    .size(64.dp),
-                                painter = painterResource(R.drawable.ic_play),
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                contentDescription = "play pause icon",
-                            )
-                        }
-
-                        IconButton(
-                            modifier = Modifier
-                                .padding(8.dp, 4.dp, 8.dp, 4.dp)
-                                .size(36.dp),
-                            onClick = {},
-                        ) {
-                            Icon(
-                                modifier = Modifier
-                                    .size(36.dp),
-                                painter = painterResource(R.drawable.ic_seek),
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                contentDescription = "seek icon",
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.weight(1f))
-
                     IconButton(
                         modifier = Modifier
-                            .padding(4.dp, 4.dp, 8.dp, 4.dp)
+                            .padding(8.dp, 4.dp, 8.dp, 4.dp)
                             .size(36.dp),
                         onClick = {},
                     ) {
                         Icon(
                             modifier = Modifier
                                 .size(36.dp),
-                            painter = painterResource(R.drawable.ic_repeat),
+                            painter = painterResource(R.drawable.ic_rewind),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            contentDescription = "rewind icon",
+                        )
+                    }
+
+                    IconButton(
+                        modifier = Modifier
+                            .padding(4.dp, 2.dp, 4.dp, 4.dp)
+                            .size(64.dp),
+                        onClick = {},
+                    ) {
+                        Icon(
+                            modifier = Modifier
+                                .size(64.dp),
+                            painter = painterResource(R.drawable.ic_play),
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            contentDescription = "play pause icon",
+                        )
+                    }
+
+                    IconButton(
+                        modifier = Modifier
+                            .padding(8.dp, 4.dp, 8.dp, 4.dp)
+                            .size(36.dp),
+                        onClick = {},
+                    ) {
+                        Icon(
+                            modifier = Modifier
+                                .size(36.dp),
+                            painter = painterResource(R.drawable.ic_seek),
                             tint = MaterialTheme.colorScheme.onSurface,
                             contentDescription = "seek icon",
                         )
                     }
                 }
-            }
 
-            SemiCircularMusicSlider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .wrapContentHeight()
-                    .align(Alignment.BottomCenter),
-                progress = musicProgress,
-                trackLength = trackDuration,
-                onProgressChange = { musicProgress = it },
-            )
+                Spacer(Modifier.weight(1f))
+
+                IconButton(
+                    modifier = Modifier
+                        .padding(4.dp, 4.dp, 8.dp, 4.dp)
+                        .size(36.dp),
+                    onClick = {},
+                ) {
+                    Icon(
+                        modifier = Modifier
+                            .size(36.dp),
+                        painter = painterResource(R.drawable.ic_repeat),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        contentDescription = "seek icon",
+                    )
+                }
+            }
         }
     }
 }
