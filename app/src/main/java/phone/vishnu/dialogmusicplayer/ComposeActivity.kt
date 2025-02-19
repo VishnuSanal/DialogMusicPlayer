@@ -2,16 +2,18 @@ package phone.vishnu.dialogmusicplayer
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.media.MediaMetadata
-import android.net.Uri
+import android.graphics.Paint
 import android.os.Bundle
 import android.support.v4.media.MediaMetadataCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,8 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,7 +39,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -48,6 +53,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import phone.vishnu.dialogmusicplayer.ui.theme.DialogMusicPlayerTheme
+import kotlin.math.cos
+import kotlin.math.sin
 
 private val poppinsFont = FontFamily(Font(R.font.poppins))
 
@@ -67,34 +74,120 @@ class ComposeActivity : ComponentActivity() {
                     containerColor = Color.Transparent,
                 ) { _ ->
 
-                    PlayerUI(
-                        applicationContext,
-                        Audio(
-                            -1,
-                            MediaMetadataCompat.Builder().putString(
-                                MediaMetadata.METADATA_KEY_MEDIA_ID,
-                                "-1",
-                            ).putString(
-                                MediaMetadata.METADATA_KEY_DISPLAY_TITLE,
-                                "Dreaming On",
-                            ).putString(
-                                MediaMetadata.METADATA_KEY_TITLE,
-                                "Dreaming On",
-                            ).putString(
-                                MediaMetadata.METADATA_KEY_ARTIST,
-                                "NEFEX",
-                            ).putLong(
-                                MediaMetadata.METADATA_KEY_DURATION,
-                                100000,
-                            ).putBitmap(
-                                MediaMetadata.METADATA_KEY_ALBUM_ART,
-                                null,
-                            ).build(),
-                            100000,
-                            Uri.EMPTY,
-                        ),
+//                    PlayerUI(
+//                        applicationContext,
+//                        Audio(
+//                            -1,
+//                            MediaMetadataCompat.Builder().putString(
+//                                MediaMetadata.METADATA_KEY_MEDIA_ID,
+//                                "-1",
+//                            ).putString(
+//                                MediaMetadata.METADATA_KEY_DISPLAY_TITLE,
+//                                "Dreaming On",
+//                            ).putString(
+//                                MediaMetadata.METADATA_KEY_TITLE,
+//                                "Dreaming On",
+//                            ).putString(
+//                                MediaMetadata.METADATA_KEY_ARTIST,
+//                                "NEFEX",
+//                            ).putLong(
+//                                MediaMetadata.METADATA_KEY_DURATION,
+//                                100000,
+//                            ).putBitmap(
+//                                MediaMetadata.METADATA_KEY_ALBUM_ART,
+//                                null,
+//                            ).build(),
+//                            100000,
+//                            Uri.EMPTY,
+//                        ),
+//                    )
+
+                    var musicProgress by remember { mutableLongStateOf(15L) }
+                    val trackDuration = 180000L
+
+                    SemiCircularMusicSlider(
+                        progress = musicProgress,
+                        trackLength = trackDuration,
+                        onProgressChange = { musicProgress = it },
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SemiCircularMusicSlider(
+    progress: Long,
+    trackLength: Long,
+    onProgressChange: (Long) -> Unit,
+) {
+    var angle by remember { mutableFloatStateOf(-180f) }
+    val strokeWidth = 16f
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectDragGestures { _, dragAmount ->
+                    angle += dragAmount.x / 4
+                    angle = angle.coerceIn(-180f, 0f)
+                    val newProgress = ((angle + 180) / 360f * trackLength).toLong()
+                    onProgressChange(newProgress)
+                }
+            },
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+        ) {
+            val centerX = size.width / 2
+            val centerY = size.height
+            val radian = Math.toRadians(angle.toDouble())
+
+            val radius = size.width / 2
+
+            val x = centerX + radius * cos(radian)
+            val y = centerY + radius * sin(radian)
+
+            // semi-circle track
+            drawArc(
+                color = Color.White,
+                startAngle = -180f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = Offset(centerX - radius, centerY - radius),
+                size = Size(radius * 2, radius * 2),
+                style = Stroke(strokeWidth),
+            )
+
+            // progress arc
+            drawArc(
+                color = Color.Black.copy(alpha = 0.75f),
+                startAngle = -180f,
+                sweepAngle = ((progress.toFloat() / trackLength) * 360f),
+                useCenter = false,
+                topLeft = Offset(centerX - radius, centerY - radius),
+                size = Size(radius * 2, radius * 2),
+                style = Stroke(strokeWidth),
+            )
+
+            // draggable handle
+            drawCircle(Color.Red, 24f, Offset(x.toFloat(), y.toFloat()))
+
+            // current progress
+            drawContext.canvas.nativeCanvas.apply {
+                drawText(
+                    "${progress / 1000} sec",
+                    centerX,
+                    centerY,
+                    Paint().apply {
+                        color = android.graphics.Color.WHITE
+                        textSize = 60f
+                        textAlign = Paint.Align.CENTER
+                    },
+                )
             }
         }
     }
@@ -115,6 +208,7 @@ private fun PlayerUI(context: Context, audio: Audio) {
     val totalDuration = audio.mediaMetadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION)
 
     Column(
+//        modifier = Modifier.clip(CircleShape),
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -135,7 +229,7 @@ private fun PlayerUI(context: Context, audio: Audio) {
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.35f)
-                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .clip(RoundedCornerShape(topStartPercent = 50, topEndPercent = 50))
                 .background(MaterialTheme.colorScheme.background)
                 .padding(8.dp),
         ) {
@@ -178,20 +272,20 @@ private fun PlayerUI(context: Context, audio: Audio) {
                 fontWeight = FontWeight.SemiBold,
             )
 
-            Slider(
-                modifier = Modifier.padding(
-                    vertical = 16.dp,
-                    horizontal = 8.dp,
-                ),
-                value = sliderState,
-                onValueChange = { sliderState = it },
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.secondary,
-                    activeTrackColor = MaterialTheme.colorScheme.secondary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
-                ),
-                valueRange = 0f..totalDuration.toFloat(),
-            )
+//            Slider(
+//                modifier = Modifier.padding(
+//                    vertical = 16.dp,
+//                    horizontal = 8.dp,
+//                ),
+//                value = sliderState,
+//                onValueChange = { sliderState = it },
+//                colors = SliderDefaults.colors(
+//                    thumbColor = MaterialTheme.colorScheme.secondary,
+//                    activeTrackColor = MaterialTheme.colorScheme.secondary,
+//                    inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
+//                ),
+//                valueRange = 0f..totalDuration.toFloat(),
+//            )
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
