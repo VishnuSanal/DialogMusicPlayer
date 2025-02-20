@@ -29,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -60,7 +59,6 @@ import kotlin.math.sin
 private val poppinsFont = FontFamily(Font(R.font.poppins))
 
 class ComposeActivity : ComponentActivity() {
-
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,15 +67,14 @@ class ComposeActivity : ComponentActivity() {
         setContent {
             DialogMusicPlayerTheme {
                 Scaffold(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize(),
                     containerColor = Color.Transparent,
-                ) { _ ->
+                ) { padding ->
 
                     PlayerUI(
-                        applicationContext,
-                        Audio(
+                        modifier = Modifier.padding(padding),
+                        context = applicationContext,
+                        audio = Audio(
                             -1,
                             MediaMetadataCompat.Builder().putString(
                                 MediaMetadata.METADATA_KEY_MEDIA_ID,
@@ -109,7 +106,11 @@ class ComposeActivity : ComponentActivity() {
 }
 
 @Composable
-private fun PlayerUI(context: Context, audio: Audio) {
+private fun PlayerUI(
+    modifier: Modifier = Modifier,
+    context: Context,
+    audio: Audio,
+) {
     var sliderState by remember {
         mutableFloatStateOf(
             0f,
@@ -123,6 +124,7 @@ private fun PlayerUI(context: Context, audio: Audio) {
     val totalDuration = audio.mediaMetadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION)
 
     Column(
+        modifier = modifier,
         verticalArrangement = Arrangement.Bottom,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -211,6 +213,7 @@ private fun PlayerUI(context: Context, audio: Audio) {
                         )
                     }
                 },
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 modifier = Modifier
@@ -292,36 +295,40 @@ private fun PlayerUI(context: Context, audio: Audio) {
 //            }
 
             Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
-                TextButton(
-                    modifier = Modifier.padding(8.dp, 4.dp, 4.dp, 4.dp),
+                IconButton(
+                    modifier = Modifier
+                        .padding(4.dp)
+                        .size(36.dp),
                     onClick = {},
-                    content = {
-                        Text(
-                            text = context.getString(R.string.one_x),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontSize = 16.sp,
-                        )
-                    },
-                )
+                ) {
+                    Text(
+                        text = context.getString(R.string.one_x),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
 
                 Spacer(Modifier.weight(1f))
 
                 Row(
+                    modifier = Modifier,
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     IconButton(
                         modifier = Modifier
-                            .padding(8.dp, 4.dp, 8.dp, 4.dp)
+                            .padding(4.dp)
                             .size(36.dp),
                         onClick = {},
                     ) {
                         Icon(
-                            modifier = Modifier
-                                .size(36.dp),
+                            modifier = Modifier.size(36.dp),
                             painter = painterResource(R.drawable.ic_rewind),
                             tint = MaterialTheme.colorScheme.onSurface,
                             contentDescription = "rewind icon",
@@ -330,13 +337,12 @@ private fun PlayerUI(context: Context, audio: Audio) {
 
                     IconButton(
                         modifier = Modifier
-                            .padding(4.dp, 2.dp, 4.dp, 4.dp)
+                            .padding(8.dp)
                             .size(64.dp),
                         onClick = {},
                     ) {
                         Icon(
-                            modifier = Modifier
-                                .size(64.dp),
+                            modifier = Modifier.size(64.dp),
                             painter = painterResource(R.drawable.ic_play),
                             tint = MaterialTheme.colorScheme.onSurface,
                             contentDescription = "play pause icon",
@@ -345,13 +351,12 @@ private fun PlayerUI(context: Context, audio: Audio) {
 
                     IconButton(
                         modifier = Modifier
-                            .padding(8.dp, 4.dp, 8.dp, 4.dp)
+                            .padding(4.dp)
                             .size(36.dp),
                         onClick = {},
                     ) {
                         Icon(
-                            modifier = Modifier
-                                .size(36.dp),
+                            modifier = Modifier.size(36.dp),
                             painter = painterResource(R.drawable.ic_seek),
                             tint = MaterialTheme.colorScheme.onSurface,
                             contentDescription = "seek icon",
@@ -363,13 +368,12 @@ private fun PlayerUI(context: Context, audio: Audio) {
 
                 IconButton(
                     modifier = Modifier
-                        .padding(4.dp, 4.dp, 8.dp, 4.dp)
+                        .padding(4.dp)
                         .size(36.dp),
                     onClick = {},
                 ) {
                     Icon(
-                        modifier = Modifier
-                            .size(36.dp),
+                        modifier = Modifier.size(36.dp),
                         painter = painterResource(R.drawable.ic_repeat),
                         tint = MaterialTheme.colorScheme.onSurface,
                         contentDescription = "seek icon",
