@@ -1,4 +1,0 @@
-- Fixes missing notification actions on Android 13+
-- Bug fixes
-
-Full Changelog: https://github.com/VishnuSanal/DialogMusicPlayer/compare/v2.1.0...v2.1.1

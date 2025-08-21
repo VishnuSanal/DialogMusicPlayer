@@ -5,14 +5,14 @@ plugins {
 apply plugin: 'kotlin-android'
 
 android {
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
         applicationId "phone.vishnu.dialogmusicplayer"
         minSdk 21
-        targetSdk 34
-        versionCode 11
-        versionName "v2.1.2"
+        targetSdk 35
+        versionCode 13
+        versionName "v2.1.4"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
