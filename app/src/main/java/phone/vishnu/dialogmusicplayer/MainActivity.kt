@@ -17,609 +17,566 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package phone.vishnu.dialogmusicplayer;
+package phone.vishnu.dialogmusicplayer
 
-import android.Manifest;
-import android.annotation.SuppressLint;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.pm.PackageManager;
-import android.content.res.ColorStateList;
-import android.media.AudioManager;
-import android.net.Uri;
-import android.os.Build;
-import android.os.Bundle;
-import android.support.v4.media.MediaBrowserCompat;
-import android.support.v4.media.MediaMetadataCompat;
-import android.support.v4.media.session.MediaControllerCompat;
-import android.support.v4.media.session.MediaSessionCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
-import android.text.TextUtils;
-import android.text.method.ScrollingMovementMethod;
-import android.util.Log;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
-import android.widget.Toast;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.lifecycle.ViewModelProvider;
-import com.google.android.material.slider.Slider;
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.content.res.ColorStateList
+import android.media.AudioManager
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.support.v4.media.MediaBrowserCompat
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.PlaybackStateCompat
+import android.text.TextUtils
+import android.text.method.ScrollingMovementMethod
+import android.util.Log
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.ViewModelProvider
+import com.google.android.material.slider.Slider
 
-public class MainActivity extends AppCompatActivity {
+class MainActivity : AppCompatActivity() {
 
-    public static final String KILL_APP_KEY = "phone.vishnu.dialogmusicplayer.kill";
-    public static final String NOTIFICATION_CLICK_KEY =
-            "phone.vishnu.dialogmusicplayer.notificationClick";
+    private lateinit var viewModel: MainViewModel
 
-    private MainViewModel viewModel;
+    private var mediaBrowser: MediaBrowserCompat? = null
 
-    private MediaBrowserCompat mediaBrowser;
+    private lateinit var slider: Slider
+    private lateinit var playPauseButton: ImageView
+    private lateinit var repeatIV: ImageView
+    private lateinit var rewindIV: ImageView
+    private lateinit var seekIV: ImageView
+    private lateinit var albumArtIV: ImageView
+    private lateinit var fileNameTV: TextView
+    private lateinit var artistNameTV: TextView
+    private lateinit var progressTV: TextView
+    private lateinit var durationTV: TextView
+    private lateinit var playbackSpeedTV: TextView
 
-    private Slider slider;
-    private ImageView playPauseButton, repeatIV, rewindIV, seekIV, albumArtIV;
-    private TextView fileNameTV, artistNameTV, progressTV, durationTV, playbackSpeedTV;
+    private var isTimeReversed = false
+    private var totalDuration = 0
+    private var id = -1L
 
-    private boolean isTimeReversed = false;
+    private val controllerCallback = object : MediaControllerCompat.Callback() {
 
-    private int totalDuration = 0;
+        override fun onMetadataChanged(metadata: MediaMetadataCompat?) {
+            super.onMetadataChanged(metadata)
+            metadata ?: return
 
-    private long id = -1;
+            try {
+                id = metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID).toLong()
+            } catch (e: NumberFormatException) {
+                id = -1
+                e.printStackTrace()
+            }
 
-    private final MediaControllerCompat.Callback controllerCallback =
-            new MediaControllerCompat.Callback() {
+            fileNameTV.text = metadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE)
+            artistNameTV.text = metadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST)
+            albumArtIV.setImageBitmap(
+                metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
+            )
 
-                @Override
-                public void onMetadataChanged(MediaMetadataCompat metadata) {
-                    super.onMetadataChanged(metadata);
+            totalDuration = metadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION).toInt()
 
-                    try {
-                        id =
-                                Long.parseLong(
-                                        metadata.getString(
-                                                MediaMetadataCompat.METADATA_KEY_MEDIA_ID));
-                    } catch (NumberFormatException e) {
-                        id = -1;
-                        e.printStackTrace();
+            durationTV.text = getFormattedTime(totalDuration.toLong(), isTimeReversed)
+
+            if (totalDuration > 0) slider.valueTo = totalDuration.toFloat()
+
+            if (id != -1L) {
+                viewModel.getSaveItem(id).observe(this@MainActivity) { saveItem ->
+                    val saveTime = saveItem.duration
+
+                    if (saveTime != 0L) {
+                        MediaControllerCompat.getMediaController(this@MainActivity)
+                            .transportControls
+                            .seekTo(saveTime)
+
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Resuming playback from ${getFormattedTime(saveTime, false)}",
+                            Toast.LENGTH_SHORT,
+                        ).show()
                     }
-
-                    fileNameTV.setText(
-                            metadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE));
-                    artistNameTV.setText(metadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST));
-                    albumArtIV.setImageBitmap(
-                            metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART));
-
-                    totalDuration =
-                            (int) metadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION);
-
-                    durationTV.setText(getFormattedTime(totalDuration, isTimeReversed));
-
-                    if (totalDuration > 0) slider.setValueTo(totalDuration);
-
-                    if (id != -1)
-                        viewModel
-                                .getSaveItem(id)
-                                .observe(
-                                        MainActivity.this,
-                                        saveItem -> {
-                                            long saveTime = saveItem.getDuration();
-
-                                            if (saveTime != 0) {
-
-                                                MediaControllerCompat.getMediaController(
-                                                                MainActivity.this)
-                                                        .getTransportControls()
-                                                        .seekTo(saveTime);
-
-                                                Toast.makeText(
-                                                                MainActivity.this,
-                                                                "Resuming playback from "
-                                                                        + getFormattedTime(
-                                                                                saveTime, false),
-                                                                Toast.LENGTH_SHORT)
-                                                        .show();
-                                            }
-                                        });
                 }
+            }
+        }
 
-                @Override
-                public void onPlaybackStateChanged(PlaybackStateCompat state) {
-                    super.onPlaybackStateChanged(state);
+        override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
+            super.onPlaybackStateChanged(state)
+            state ?: return
 
-                    long position = state.getPosition();
+            val position = state.position
 
-                    if (position >= slider.getValueFrom() && position <= slider.getValueTo())
-                        slider.setValue((int) position);
+            if (position >= slider.valueFrom && position <= slider.valueTo) {
+                slider.value = position.toFloat()
+            }
 
-                    progressTV.setText(getFormattedTime(position, isTimeReversed));
+            progressTV.text = getFormattedTime(position, isTimeReversed)
 
-                    if (state.getState() == PlaybackStateCompat.STATE_PLAYING)
-                        playPauseButton.setImageResource(R.drawable.ic_pause);
-                    else if (state.getState() == PlaybackStateCompat.STATE_PAUSED)
-                        playPauseButton.setImageResource(R.drawable.ic_play);
-                    else if (state.getState() == PlaybackStateCompat.STATE_STOPPED)
-                        playPauseButton.setImageResource(R.drawable.ic_replay);
-                }
+            when (state.state) {
+                PlaybackStateCompat.STATE_PLAYING ->
+                    playPauseButton.setImageResource(R.drawable.ic_pause)
+                PlaybackStateCompat.STATE_PAUSED ->
+                    playPauseButton.setImageResource(R.drawable.ic_play)
+                PlaybackStateCompat.STATE_STOPPED ->
+                    playPauseButton.setImageResource(R.drawable.ic_replay)
+            }
+        }
 
-                @Override
-                public void onSessionDestroyed() {
-                    super.onSessionDestroyed();
-                    mediaBrowser.disconnect();
-                }
-            };
+        override fun onSessionDestroyed() {
+            super.onSessionDestroyed()
+            mediaBrowser?.disconnect()
+        }
+    }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
 
-        FileUtils.clearApplicationData(getApplicationContext()); // fix for an old mistake ;_;
+        FileUtils.clearApplicationData(applicationContext) // fix for an old mistake ;_;
 
-        initViews();
+        initViews()
 
-        viewModel = new ViewModelProvider(this).get(MainViewModel.class);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            registerReceiver(killReceiver, new IntentFilter(KILL_APP_KEY), RECEIVER_NOT_EXPORTED);
-        else registerReceiver(killReceiver, new IntentFilter(KILL_APP_KEY));
+        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO)
-                            == PackageManager.PERMISSION_GRANTED
-                    && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
-                            == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
-            else
+            registerReceiver(killReceiver, IntentFilter(KILL_APP_KEY), RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(killReceiver, IntentFilter(KILL_APP_KEY))
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            ) {
+                initTasks(intent)
+            } else {
                 requestPermissions(
-                        new String[] {
-                            Manifest.permission.READ_MEDIA_AUDIO,
-                            Manifest.permission.POST_NOTIFICATIONS
-                        },
-                        0);
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
-                    == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
-            else requestPermissions(new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
-        else initTasks(getIntent());
+                    arrayOf(
+                        Manifest.permission.READ_MEDIA_AUDIO,
+                        Manifest.permission.POST_NOTIFICATIONS,
+                    ),
+                    0,
+                )
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+                initTasks(intent)
+            } else {
+                requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 0)
+            }
+        } else {
+            initTasks(intent)
+        }
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
+    override fun onResume() {
+        super.onResume()
+
+        initScreen()
+
+        volumeControlStream = AudioManager.STREAM_MUSIC
+
+        MediaControllerCompat.getMediaController(this@MainActivity)
+            ?.registerCallback(controllerCallback)
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-
-        initScreen();
-
-        setVolumeControlStream(AudioManager.STREAM_MUSIC);
-
-        if (MediaControllerCompat.getMediaController(MainActivity.this) != null)
-            MediaControllerCompat.getMediaController(MainActivity.this)
-                    .registerCallback(controllerCallback);
+    override fun onStop() {
+        super.onStop()
+        MediaControllerCompat.getMediaController(this@MainActivity)
+            ?.unregisterCallback(controllerCallback)
     }
 
-    @Override
-    public void onStop() {
-        super.onStop();
-        if (MediaControllerCompat.getMediaController(MainActivity.this) != null)
-            MediaControllerCompat.getMediaController(MainActivity.this)
-                    .unregisterCallback(controllerCallback);
-    }
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(killReceiver)
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        unregisterReceiver(killReceiver);
-
-        if (mediaBrowser != null) mediaBrowser.disconnect();
+        mediaBrowser?.disconnect()
 
         // hack!
         // can't fix notification from getting destroyed on app exit even with the music playing :(
-        if (MediaControllerCompat.getMediaController(this) != null)
-            MediaControllerCompat.getMediaController(this).getTransportControls().stop();
+        MediaControllerCompat.getMediaController(this)
+            ?.transportControls?.stop()
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-
-        initTasks(intent);
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        initTasks(intent)
     }
 
-    @Override
-    public void onRequestPermissionsResult(
-            int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray,
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
         if (requestCode == 0) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) initTasks(getIntent());
-            else {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                    if (shouldShowRequestPermissionRationale(
-                            Manifest.permission.READ_EXTERNAL_STORAGE)) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                initTasks(intent)
+            } else {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    if (shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE)) {
                         Toast.makeText(
-                                        this,
-                                        "Storage permission denied\nPlease grant necessary permissions",
-                                        Toast.LENGTH_LONG)
-                                .show();
-                        requestPermissions(
-                                new String[] {Manifest.permission.READ_EXTERNAL_STORAGE}, 0);
+                            this,
+                            "Storage permission denied\nPlease grant necessary permissions",
+                            Toast.LENGTH_LONG,
+                        ).show()
+                        requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 0)
                     } else {
                         Toast.makeText(
-                                        this,
-                                        "Storage permission denied\nPlease grant permission from settings",
-                                        Toast.LENGTH_LONG)
-                                .show();
+                            this,
+                            "Storage permission denied\nPlease grant permission from settings",
+                            Toast.LENGTH_LONG,
+                        ).show()
                     }
+                }
             }
         }
     }
 
-    @Override
-    public void finish() {
-        super.finishAndRemoveTask();
+    override fun finish() {
+        super.finishAndRemoveTask()
     }
 
-    private void initTasks(Intent intent) {
+    private fun initTasks(intent: Intent) {
+        Log.e("vishnu", "initTasks Intent#getAction: ${intent.action}")
 
-        Log.e("vishnu", "initTasks Intent#getAction: " + intent.getAction());
+        if (Intent.ACTION_VIEW == intent.action || Intent.ACTION_SEND == intent.action) {
+            @Suppress("DEPRECATION")
+            val uri: Uri? = if (Intent.ACTION_VIEW == intent.action) {
+                intent.data
+            } else {
+                intent.extras?.get(Intent.EXTRA_STREAM) as? Uri
+            }
 
-        if (Intent.ACTION_VIEW.equals(intent.getAction())
-                || Intent.ACTION_SEND.equals(intent.getAction())) {
-
-            //noinspection DataFlowIssue
-            Uri uri =
-                    Intent.ACTION_VIEW.equals(intent.getAction())
-                            ? intent.getData()
-                            : (Uri) intent.getExtras().get(Intent.EXTRA_STREAM);
-
-            Log.e("vishnu", "initTasks:" + uri);
+            Log.e("vishnu", "initTasks:$uri")
 
             if (uri == null) {
                 Toast.makeText(
-                                this,
-                                "Oops! Something went wrong\n\n" + intent.getAction(),
-                                Toast.LENGTH_LONG)
-                        .show();
-                finish();
-                return;
+                    this,
+                    "Oops! Something went wrong\n\n${intent.action}",
+                    Toast.LENGTH_LONG,
+                ).show()
+                finish()
+                return
             }
 
             if (mediaBrowser == null) {
-                mediaBrowser =
-                        new MediaBrowserCompat(
-                                this,
-                                new ComponentName(this, MediaPlaybackService.class),
-                                new MediaBrowserCompat.ConnectionCallback() {
-                                    @Override
-                                    public void onConnected() {
-                                        MediaSessionCompat.Token token =
-                                                mediaBrowser.getSessionToken();
+                mediaBrowser = MediaBrowserCompat(
+                    this,
+                    ComponentName(this, MediaPlaybackService::class.java),
+                    object : MediaBrowserCompat.ConnectionCallback() {
+                        override fun onConnected() {
+                            val token = mediaBrowser!!.sessionToken
 
-                                        MediaControllerCompat mediaController =
-                                                new MediaControllerCompat(MainActivity.this, token);
+                            val mediaController = MediaControllerCompat(this@MainActivity, token)
 
-                                        MediaControllerCompat.setMediaController(
-                                                MainActivity.this, mediaController);
+                            MediaControllerCompat.setMediaController(this@MainActivity, mediaController)
 
-                                        buildTransportControls();
+                            buildTransportControls()
 
-                                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                                .getTransportControls()
-                                                .playFromUri(uri, null);
-                                    }
+                            MediaControllerCompat.getMediaController(this@MainActivity)
+                                .transportControls
+                                .playFromUri(uri, null)
+                        }
 
-                                    @Override
-                                    public void onConnectionSuspended() {
-                                        // The Service has crashed. Disable transport controls until
-                                        // it
-                                        // automatically reconnects
-                                    }
+                        override fun onConnectionSuspended() {
+                            // The Service has crashed. Disable transport controls until it
+                            // automatically reconnects
+                        }
 
-                                    @Override
-                                    public void onConnectionFailed() {
-                                        // The Service has refused our connection
-                                    }
-                                },
-                                null);
-                mediaBrowser.connect();
+                        override fun onConnectionFailed() {
+                            // The Service has refused our connection
+                        }
+                    },
+                    null,
+                )
+                mediaBrowser!!.connect()
             } else {
-                MediaControllerCompat.getMediaController(MainActivity.this)
-                        .getTransportControls()
-                        .playFromUri(uri, null);
+                MediaControllerCompat.getMediaController(this@MainActivity)
+                    .transportControls
+                    .playFromUri(uri, null)
 
-                float playbackSpeed =
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getPlaybackState()
-                                .getPlaybackSpeed();
+                val playbackSpeed = MediaControllerCompat.getMediaController(this@MainActivity)
+                    .playbackState
+                    .playbackSpeed
 
-                if (playbackSpeed != 0)
-                    MediaControllerCompat.getMediaController(MainActivity.this)
-                            .getTransportControls()
-                            .setPlaybackSpeed(playbackSpeed);
+                if (playbackSpeed != 0f) {
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls
+                        .setPlaybackSpeed(playbackSpeed)
+                }
 
-                MediaControllerCompat.getMediaController(MainActivity.this)
-                        .getTransportControls()
-                        .setRepeatMode(
-                                MediaControllerCompat.getMediaController(MainActivity.this)
-                                        .getRepeatMode());
+                MediaControllerCompat.getMediaController(this@MainActivity)
+                    .transportControls
+                    .setRepeatMode(
+                        MediaControllerCompat.getMediaController(this@MainActivity).repeatMode,
+                    )
             }
-
         } else if (!intent.hasExtra(NOTIFICATION_CLICK_KEY)) {
             Toast.makeText(
-                            this,
-                            "Oops! Something went wrong\n\n" + intent.getAction(),
-                            Toast.LENGTH_LONG)
-                    .show();
-            finish();
+                this,
+                "Oops! Something went wrong\n\n${intent.action}",
+                Toast.LENGTH_LONG,
+            ).show()
+            finish()
         }
     }
 
-    void buildTransportControls() {
-        playPauseButton.setOnClickListener(
-                v -> {
-                    int playBackState =
-                            MediaControllerCompat.getMediaController(MainActivity.this)
-                                    .getPlaybackState()
-                                    .getState();
+    fun buildTransportControls() {
+        playPauseButton.setOnClickListener {
+            val playBackState = MediaControllerCompat.getMediaController(this@MainActivity)
+                .playbackState
+                .state
 
-                    if (playBackState == PlaybackStateCompat.STATE_PLAYING) {
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .pause();
-                        playPauseButton.setImageResource(R.drawable.ic_play);
-                    } else if (playBackState == PlaybackStateCompat.STATE_PAUSED) {
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .play();
-                        playPauseButton.setImageResource(R.drawable.ic_pause);
-                    } else if (playBackState == PlaybackStateCompat.STATE_STOPPED) {
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .seekTo(0);
+            when (playBackState) {
+                PlaybackStateCompat.STATE_PLAYING -> {
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls.pause()
+                    playPauseButton.setImageResource(R.drawable.ic_play)
+                }
+                PlaybackStateCompat.STATE_PAUSED -> {
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls.play()
+                    playPauseButton.setImageResource(R.drawable.ic_pause)
+                }
+                PlaybackStateCompat.STATE_STOPPED -> {
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls.seekTo(0)
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls.play()
+                    playPauseButton.setImageResource(R.drawable.ic_pause)
+                }
+            }
+        }
 
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .play();
-                        playPauseButton.setImageResource(R.drawable.ic_pause);
-                    }
-                });
+        slider.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                MediaControllerCompat.getMediaController(this@MainActivity)
+                    .transportControls
+                    .seekTo(value.toInt().toLong())
+            }
+        }
 
-        slider.addOnChangeListener(
-                (slider, value, fromUser) -> {
-                    if (fromUser)
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .seekTo((int) value);
-                });
+        rewindIV.setOnClickListener {
+            MediaControllerCompat.getMediaController(this@MainActivity)
+                .transportControls
+                .seekTo(
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .playbackState.position - 10000,
+                )
+        }
 
-        rewindIV.setOnClickListener(
-                v ->
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .seekTo(
-                                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                                        .getPlaybackState()
-                                                        .getPosition()
-                                                - 10000));
+        seekIV.setOnClickListener {
+            MediaControllerCompat.getMediaController(this@MainActivity)
+                .transportControls
+                .seekTo(
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .playbackState.position + 10000,
+                )
+        }
 
-        seekIV.setOnClickListener(
-                v ->
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .seekTo(
-                                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                                        .getPlaybackState()
-                                                        .getPosition()
-                                                + 10000));
-
-        MediaControllerCompat.getMediaController(MainActivity.this)
-                .registerCallback(controllerCallback);
+        MediaControllerCompat.getMediaController(this@MainActivity)
+            .registerCallback(controllerCallback)
     }
 
-    private void initViews() {
-        slider = findViewById(R.id.slider);
-        playPauseButton = findViewById(R.id.playPauseButton);
-        fileNameTV = findViewById(R.id.fileNameTV);
-        artistNameTV = findViewById(R.id.artistNameTV);
-        progressTV = findViewById(R.id.progressTV);
-        durationTV = findViewById(R.id.durationTV);
-        repeatIV = findViewById(R.id.repeatButton);
-        rewindIV = findViewById(R.id.rewindButton);
-        seekIV = findViewById(R.id.seekButton);
-        albumArtIV = findViewById(R.id.albumArtIV);
-        playbackSpeedTV = findViewById(R.id.playbackSpeedButton);
-        initColors();
-        setTextViewScrollingBehaviour();
-        setListeners();
+    private fun initViews() {
+        slider = findViewById(R.id.slider)
+        playPauseButton = findViewById(R.id.playPauseButton)
+        fileNameTV = findViewById(R.id.fileNameTV)
+        artistNameTV = findViewById(R.id.artistNameTV)
+        progressTV = findViewById(R.id.progressTV)
+        durationTV = findViewById(R.id.durationTV)
+        repeatIV = findViewById(R.id.repeatButton)
+        rewindIV = findViewById(R.id.rewindButton)
+        seekIV = findViewById(R.id.seekButton)
+        albumArtIV = findViewById(R.id.albumArtIV)
+        playbackSpeedTV = findViewById(R.id.playbackSpeedButton)
+        initColors()
+        setTextViewScrollingBehaviour()
+        setListeners()
     }
 
-    private void initColors() {
+    private fun initColors() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Log.e("vishnu", "isDynamicColorAvailable()");
+            Log.e("vishnu", "isDynamicColorAvailable()")
 
-            int colorAccent = ColorUtils.getAccentColor(this);
+            val colorAccent = ColorUtils.getAccentColor(this)
+            val colorAccentLight = ColorUtils.getAccentColorLight(this)
 
-            int colorAccentLight = ColorUtils.getAccentColorLight(this);
+            playPauseButton.setColorFilter(colorAccent)
 
-            playPauseButton.setColorFilter(colorAccent);
+            rewindIV.setColorFilter(colorAccentLight)
+            seekIV.setColorFilter(colorAccentLight)
 
-            rewindIV.setColorFilter(colorAccentLight);
-            seekIV.setColorFilter(colorAccentLight);
-
-            slider.setThumbStrokeColor(ColorStateList.valueOf(colorAccent));
-            slider.setTrackActiveTintList(ColorStateList.valueOf(colorAccent));
-
-            slider.setHaloTintList(ColorStateList.valueOf(colorAccentLight));
+            slider.thumbStrokeColor = ColorStateList.valueOf(colorAccent)
+            slider.trackActiveTintList = ColorStateList.valueOf(colorAccent)
+            slider.haloTintList = ColorStateList.valueOf(colorAccentLight)
         }
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private void setListeners() {
-        progressTV.setOnClickListener(v -> isTimeReversed = !isTimeReversed);
+    private fun setListeners() {
+        progressTV.setOnClickListener { isTimeReversed = !isTimeReversed }
 
-        slider.setLabelFormatter(value -> getFormattedTime((long) value, isTimeReversed));
+        slider.setLabelFormatter { value -> getFormattedTime(value.toLong(), isTimeReversed) }
 
-        playbackSpeedTV.setOnClickListener(
-                v -> {
-                    float speed =
-                            MediaControllerCompat.getMediaController(MainActivity.this)
-                                    .getPlaybackState()
-                                    .getPlaybackSpeed();
+        playbackSpeedTV.setOnClickListener {
+            val speed = MediaControllerCompat.getMediaController(this@MainActivity)
+                .playbackState
+                .playbackSpeed
 
-                    // float[] speeds = {0.5F, 0.75F, 1.0F, 1.25F, 1.5F, 2.0F};
-
-                    if (speed == 0.5F) {
-                        playbackSpeedTV.setText(R.string.zero_seven_five_x);
-                        playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this));
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .setPlaybackSpeed((0.75F));
-                    } else if (speed == 0.75F) {
-                        playbackSpeedTV.setText(R.string.one_x);
-                        playbackSpeedTV.setTextColor(
-                                getResources().getColor(R.color.textColorLight));
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .setPlaybackSpeed((1F));
-                    } else if (speed == 1.0F) {
-                        playbackSpeedTV.setText(R.string.one_two_five_x);
-                        playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this));
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .setPlaybackSpeed((1.25F));
-                    } else if (speed == 1.25F) {
-                        playbackSpeedTV.setText(R.string.one_five_x);
-                        playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this));
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .setPlaybackSpeed((1.5F));
-                    } else if (speed == 1.5F) {
-                        playbackSpeedTV.setText(R.string.two_x);
-                        playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this));
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .setPlaybackSpeed((2.0F));
-                    } else if (speed == 2.0F) {
-                        playbackSpeedTV.setText(R.string.zero_five_x);
-                        playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this));
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .setPlaybackSpeed((0.5F));
-                    }
-                });
-
-        repeatIV.setOnClickListener(
-                v -> {
-                    int state =
-                            MediaControllerCompat.getMediaController(MainActivity.this)
-                                    .getRepeatMode();
-
-                    if (state == PlaybackStateCompat.REPEAT_MODE_NONE) {
-                        repeatIV.setImageResource(R.drawable.ic_repeat_one);
-                        repeatIV.setColorFilter(ColorUtils.getAccentColor(this));
-
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ONE);
-
-                    } else if (state == PlaybackStateCompat.REPEAT_MODE_ONE) {
-                        repeatIV.setImageResource(R.drawable.ic_repeat);
-                        repeatIV.setColorFilter(ColorUtils.getAccentColor(this));
-
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ALL);
-
-                    } else if (state == PlaybackStateCompat.REPEAT_MODE_ALL) {
-                        repeatIV.setImageResource(R.drawable.ic_repeat);
-                        repeatIV.setColorFilter(getResources().getColor(R.color.textColorLight));
-
-                        MediaControllerCompat.getMediaController(MainActivity.this)
-                                .getTransportControls()
-                                .setRepeatMode(PlaybackStateCompat.REPEAT_MODE_NONE);
-                    }
-                });
-
-        findViewById(R.id.parentRelativeLayout)
-                .setOnTouchListener(
-                        (v, event) -> {
-                            if (event.getY() < albumArtIV.getY()
-                                    || (event.getY()
-                                                    < findViewById(R.id.childConstraintLayout)
-                                                            .getY()
-                                            && (event.getX() < albumArtIV.getX()
-                                                    || event.getX()
-                                                            > albumArtIV.getX()
-                                                                    + albumArtIV.getWidth()))) {
-                                moveTaskToBack(false);
-                                return true;
-                            }
-
-                            return false;
-                        });
-    }
-
-    private void initScreen() {
-        this.setFinishOnTouchOutside(false);
-
-        getWindow()
-                .getDecorView()
-                .setSystemUiVisibility(
-                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-
-        getWindow()
-                .setLayout(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-    }
-
-    private void setTextViewScrollingBehaviour() {
-
-        fileNameTV.setMovementMethod(new ScrollingMovementMethod());
-        artistNameTV.setMovementMethod(new ScrollingMovementMethod());
-
-        fileNameTV.setSingleLine(true);
-        fileNameTV.setHorizontallyScrolling(true);
-        fileNameTV.setEllipsize(TextUtils.TruncateAt.MARQUEE);
-        fileNameTV.setMarqueeRepeatLimit(-1);
-        fileNameTV.setSelected(true);
-        fileNameTV.setPadding(10, 0, 10, 0);
-
-        artistNameTV.setSingleLine(true);
-        artistNameTV.setHorizontallyScrolling(true);
-        artistNameTV.setEllipsize(TextUtils.TruncateAt.MARQUEE);
-        artistNameTV.setMarqueeRepeatLimit(-1);
-        artistNameTV.setSelected(true);
-        artistNameTV.setPadding(10, 0, 10, 0);
-    }
-
-    private String getFormattedTime(long millis, boolean isTimeReversed) {
-
-        long minutes = (millis / 1000) / 60;
-        long seconds = (millis / 1000) % 60;
-
-        String secondsStr = Long.toString(seconds);
-
-        String secs = (secondsStr.length() >= 2) ? secondsStr.substring(0, 2) : "0" + secondsStr;
-
-        if (!isTimeReversed) return minutes + ":" + secs;
-
-        return "-" + getFormattedTime(totalDuration - millis, false);
-    }
-
-    private final BroadcastReceiver killReceiver =
-            new BroadcastReceiver() {
-                @Override
-                public void onReceive(Context context, Intent intent) {
-                    if (KILL_APP_KEY.equals(intent.getAction())) finish();
+            when (speed) {
+                0.5f -> {
+                    playbackSpeedTV.setText(R.string.zero_seven_five_x)
+                    playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this))
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls.setPlaybackSpeed(0.75f)
                 }
-            };
+                0.75f -> {
+                    playbackSpeedTV.setText(R.string.one_x)
+                    @Suppress("DEPRECATION")
+                    playbackSpeedTV.setTextColor(resources.getColor(R.color.textColorLight))
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls.setPlaybackSpeed(1f)
+                }
+                1.0f -> {
+                    playbackSpeedTV.setText(R.string.one_two_five_x)
+                    playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this))
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls.setPlaybackSpeed(1.25f)
+                }
+                1.25f -> {
+                    playbackSpeedTV.setText(R.string.one_five_x)
+                    playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this))
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls.setPlaybackSpeed(1.5f)
+                }
+                1.5f -> {
+                    playbackSpeedTV.setText(R.string.two_x)
+                    playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this))
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls.setPlaybackSpeed(2.0f)
+                }
+                2.0f -> {
+                    playbackSpeedTV.setText(R.string.zero_five_x)
+                    playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this))
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls.setPlaybackSpeed(0.5f)
+                }
+            }
+        }
+
+        repeatIV.setOnClickListener {
+            val state = MediaControllerCompat.getMediaController(this@MainActivity).repeatMode
+
+            when (state) {
+                PlaybackStateCompat.REPEAT_MODE_NONE -> {
+                    repeatIV.setImageResource(R.drawable.ic_repeat_one)
+                    repeatIV.setColorFilter(ColorUtils.getAccentColor(this))
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls
+                        .setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ONE)
+                }
+                PlaybackStateCompat.REPEAT_MODE_ONE -> {
+                    repeatIV.setImageResource(R.drawable.ic_repeat)
+                    repeatIV.setColorFilter(ColorUtils.getAccentColor(this))
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls
+                        .setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ALL)
+                }
+                PlaybackStateCompat.REPEAT_MODE_ALL -> {
+                    repeatIV.setImageResource(R.drawable.ic_repeat)
+                    @Suppress("DEPRECATION")
+                    repeatIV.setColorFilter(resources.getColor(R.color.textColorLight))
+                    MediaControllerCompat.getMediaController(this@MainActivity)
+                        .transportControls
+                        .setRepeatMode(PlaybackStateCompat.REPEAT_MODE_NONE)
+                }
+            }
+        }
+
+        findViewById<View>(R.id.parentRelativeLayout).setOnTouchListener { _, event ->
+            if (event.y < albumArtIV.y ||
+                (
+                    event.y < findViewById<View>(R.id.childConstraintLayout).y &&
+                        (event.x < albumArtIV.x || event.x > albumArtIV.x + albumArtIV.width)
+                    )
+            ) {
+                moveTaskToBack(false)
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    private fun initScreen() {
+        setFinishOnTouchOutside(false)
+
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+
+        window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+    }
+
+    private fun setTextViewScrollingBehaviour() {
+        fileNameTV.movementMethod = ScrollingMovementMethod()
+        artistNameTV.movementMethod = ScrollingMovementMethod()
+
+        fileNameTV.isSingleLine = true
+        fileNameTV.setHorizontallyScrolling(true)
+        fileNameTV.ellipsize = TextUtils.TruncateAt.MARQUEE
+        fileNameTV.marqueeRepeatLimit = -1
+        fileNameTV.isSelected = true
+        fileNameTV.setPadding(10, 0, 10, 0)
+
+        artistNameTV.isSingleLine = true
+        artistNameTV.setHorizontallyScrolling(true)
+        artistNameTV.ellipsize = TextUtils.TruncateAt.MARQUEE
+        artistNameTV.marqueeRepeatLimit = -1
+        artistNameTV.isSelected = true
+        artistNameTV.setPadding(10, 0, 10, 0)
+    }
+
+    private fun getFormattedTime(millis: Long, isTimeReversed: Boolean): String {
+        val minutes = (millis / 1000) / 60
+        val seconds = (millis / 1000) % 60
+
+        val secondsStr = seconds.toString()
+        val secs = if (secondsStr.length >= 2) secondsStr.substring(0, 2) else "0$secondsStr"
+
+        return if (!isTimeReversed) {
+            "$minutes:$secs"
+        } else {
+            "-${getFormattedTime(totalDuration - millis, false)}"
+        }
+    }
+
+    private val killReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (KILL_APP_KEY == intent.action) finish()
+        }
+    }
+
+    companion object {
+        const val KILL_APP_KEY = "phone.vishnu.dialogmusicplayer.kill"
+        const val NOTIFICATION_CLICK_KEY = "phone.vishnu.dialogmusicplayer.notificationClick"
+    }
 }

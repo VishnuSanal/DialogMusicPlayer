@@ -17,39 +17,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package phone.vishnu.dialogmusicplayer;
+package phone.vishnu.dialogmusicplayer
 
-import android.content.Context;
-import android.os.AsyncTask;
-import android.util.Log;
-import java.io.File;
-import java.io.IOException;
+import android.content.Context
+import android.os.AsyncTask
+import android.util.Log
+import java.io.File
+import java.io.IOException
 
-public class FileUtils {
+object FileUtils {
 
-    public static void clearApplicationData(Context context) {
+    @JvmStatic
+    fun clearApplicationData(context: Context) {
         try {
-            AsyncTask.execute(() -> clear(context));
-        } catch (Exception e) {
-            Log.e("vishnu", "clearApplicationData: " + e);
+            AsyncTask.execute { clear(context) }
+        } catch (e: Exception) {
+            Log.e("vishnu", "clearApplicationData: $e")
         }
     }
 
-    private static void clear(Context context) {
+    private fun clear(context: Context) {
+        val path = context.filesDir.path
+        val file = File(path)
 
-        String path = context.getFilesDir().getPath();
+        if (!file.exists()) return
 
-        File file = new File(path);
-
-        if (!file.exists()) return;
-
-        String command = "rm -rf " + path;
+        val command = "rm -rf $path"
 
         try {
-            Runtime.getRuntime().exec(command);
-            Log.i("vishnu", "clearApplicationData() Deleted: " + path);
-        } catch (IOException e) {
-            Log.e("vishnu", "clearApplicationData: " + e);
+            Runtime.getRuntime().exec(command)
+            Log.i("vishnu", "clearApplicationData() Deleted: $path")
+        } catch (e: IOException) {
+            Log.e("vishnu", "clearApplicationData: $e")
         }
     }
 }

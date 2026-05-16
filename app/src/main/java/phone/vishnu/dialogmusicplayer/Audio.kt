@@ -17,85 +17,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package phone.vishnu.dialogmusicplayer;
+package phone.vishnu.dialogmusicplayer
 
-import android.media.MediaMetadata;
-import android.net.Uri;
-import android.support.v4.media.MediaMetadataCompat;
-import androidx.annotation.NonNull;
+import android.media.MediaMetadata
+import android.net.Uri
+import android.support.v4.media.MediaMetadataCompat
 
-public class Audio {
-
-    long id;
-    private MediaMetadataCompat mediaMetadata;
-    private long duration;
-    private Uri uri;
-
-    public Audio() {}
-
-    public Audio(long id, MediaMetadataCompat mediaMetadata, long duration, Uri uri) {
-        this.id = id;
-        this.mediaMetadata = mediaMetadata;
-        this.duration = duration;
-        this.uri = uri;
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public MediaMetadataCompat getMediaMetadata() {
-        return mediaMetadata;
-    }
-
-    public void setMediaMetadata(MediaMetadataCompat mediaMetadata) {
-        this.mediaMetadata = mediaMetadata;
-    }
-
-    public long getDuration() {
-        return duration;
-    }
-
-    public void setDuration(long duration) {
-        this.duration = duration;
-    }
-
-    public Uri getUri() {
-        return uri;
-    }
-
-    public void setUri(Uri uri) {
-        this.uri = uri;
-    }
-
-    @NonNull
-    @Override
-    public String toString() {
-        return "Audio["
-                + "\nid: "
-                + id
-                + "\nMETADATA_KEY_MEDIA_ID: "
-                + mediaMetadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)
-                + "\nMETADATA_KEY_DISPLAY_TITLE: "
-                + mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE)
-                + "\nMETADATA_KEY_TITLE: "
-                + mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_TITLE)
-                + "\nMETADATA_KEY_ARTIST: "
-                + mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ARTIST)
-                + "\nMETADATA_KEY_DURATION: "
-                + mediaMetadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION)
-                + "\nMETADATA_KEY_ALBUM_ART_URI: "
-                + mediaMetadata.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI)
-                + "\nMETADATA_KEY_ALBUM_ART: "
-                + mediaMetadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART)
-                + "\nduration: "
-                + duration
-                + "\nuri: "
-                + uri
-                + "\n]";
+class Audio(
+    var id: Long = 0,
+    var mediaMetadata: MediaMetadataCompat? = null,
+    var duration: Long = 0,
+    var uri: Uri? = null,
+) {
+    override fun toString(): String {
+        return "Audio[" +
+            "\nid: $id" +
+            "\nMETADATA_KEY_MEDIA_ID: ${mediaMetadata?.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)}" +
+            "\nMETADATA_KEY_DISPLAY_TITLE: ${mediaMetadata?.getString(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE)}" +
+            "\nMETADATA_KEY_TITLE: ${mediaMetadata?.getString(MediaMetadataCompat.METADATA_KEY_TITLE)}" +
+            "\nMETADATA_KEY_ARTIST: ${mediaMetadata?.getString(MediaMetadataCompat.METADATA_KEY_ARTIST)}" +
+            "\nMETADATA_KEY_DURATION: ${mediaMetadata?.getLong(MediaMetadataCompat.METADATA_KEY_DURATION)}" +
+            "\nMETADATA_KEY_ALBUM_ART_URI: ${mediaMetadata?.getString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI)}" +
+            "\nMETADATA_KEY_ALBUM_ART: ${mediaMetadata?.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART)}" +
+            "\nduration: $duration" +
+            "\nuri: $uri" +
+            "\n]"
     }
 }

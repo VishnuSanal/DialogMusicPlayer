@@ -17,286 +17,238 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package phone.vishnu.dialogmusicplayer;
+package phone.vishnu.dialogmusicplayer
 
-import android.content.ContentResolver;
-import android.content.ContentUris;
-import android.content.Context;
-import android.database.Cursor;
-import android.graphics.BitmapFactory;
-import android.media.MediaMetadata;
-import android.media.MediaMetadataRetriever;
-import android.media.MediaScannerConnection;
-import android.net.Uri;
-import android.os.Build;
-import android.provider.MediaStore;
-import android.support.v4.media.MediaMetadataCompat;
-import androidx.annotation.AnyRes;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
-import java.io.IOException;
-import java.net.URLDecoder;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
+import android.content.ContentResolver
+import android.content.ContentUris
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.media.MediaMetadata
+import android.media.MediaMetadataRetriever
+import android.media.MediaScannerConnection
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import android.support.v4.media.MediaMetadataCompat
+import androidx.annotation.AnyRes
+import java.net.URLDecoder
+import java.util.concurrent.atomic.AtomicReference
 
-public class AudioUtils {
+object AudioUtils {
 
-    public static Audio getMetaData(Context context, String duration, Uri uri) {
-
+    @JvmStatic
+    fun getMetaData(context: Context, duration: String, uri: Uri): Audio {
         try {
-
-            Audio audio;
-
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-
-                audio = retrieveMetadata(context, duration, uri);
-
-                if (audio != null) return audio;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val audio = retrieveMetadata(context, duration, uri)
+                if (audio != null) return audio
             }
 
-            audio = fetchMetadata(context, duration, uri);
+            val audio = fetchMetadata(context, duration, uri)
+            if (audio != null) return audio
 
-            if (audio != null) return audio;
-
-            AtomicReference<Uri> contentUri = new AtomicReference<>();
+            val contentUri = AtomicReference<Uri>()
 
             MediaScannerConnection.scanFile(
-                    context,
-                    new String[] {uri.getPath()},
-                    null,
-                    (s, resultUri) -> contentUri.set(resultUri));
+                context,
+                arrayOf(uri.path),
+                null,
+            ) { _, resultUri -> contentUri.set(resultUri) }
 
-            audio = fetchMetadata(context, duration, contentUri.get());
-
-            if (audio != null) return audio;
-
-        } catch (Exception e) {
-            e.printStackTrace();
+            val scannedAudio = fetchMetadata(context, duration, contentUri.get())
+            if (scannedAudio != null) return scannedAudio
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
 
-        String name = extractName(uri);
+        val name = extractName(uri)
 
-        return new Audio(
-                -1,
-                new MediaMetadataCompat.Builder()
-                        .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, "-1")
-                        .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
-                        .putString(MediaMetadata.METADATA_KEY_TITLE, name)
-                        .putString(MediaMetadata.METADATA_KEY_ARTIST, "<Unknown Artist>")
-                        .putLong(MediaMetadata.METADATA_KEY_DURATION, Long.parseLong(duration))
-                        .putString(
-                                MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
-                                getUriToDrawable(context, R.drawable.icon_fg))
-                        .build(),
-                Long.parseLong(duration),
-                uri);
+        return Audio(
+            -1,
+            MediaMetadataCompat.Builder()
+                .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, "-1")
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
+                .putString(MediaMetadata.METADATA_KEY_TITLE, name)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "<Unknown Artist>")
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
+                .putString(
+                    MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
+                    getUriToDrawable(context, R.drawable.icon_fg),
+                )
+                .build(),
+            duration.toLong(),
+            uri,
+        )
     }
 
-    @Nullable
-    @RequiresApi(api = Build.VERSION_CODES.Q)
-    private static Audio retrieveMetadata(Context context, String duration, Uri uri) {
+    private fun retrieveMetadata(context: Context, duration: String, uri: Uri): Audio? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
 
         try {
-            MediaMetadataRetriever mediaMetadataRetriever = new MediaMetadataRetriever();
+            val mediaMetadataRetriever = MediaMetadataRetriever()
+            mediaMetadataRetriever.setDataSource(context, uri)
 
-            mediaMetadataRetriever.setDataSource(context, uri);
+            val picture = mediaMetadataRetriever.embeddedPicture
 
-            byte[] picture = mediaMetadataRetriever.getEmbeddedPicture();
+            val id = extractId(context, duration, uri)
 
-            long id = extractId(context, duration, uri);
+            val audio = Audio(
+                id,
+                MediaMetadataCompat.Builder()
+                    .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, id.toString())
+                    .putString(
+                        MediaMetadata.METADATA_KEY_DISPLAY_TITLE,
+                        mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
+                    )
+                    .putString(
+                        MediaMetadata.METADATA_KEY_TITLE,
+                        mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
+                    )
+                    .putString(
+                        MediaMetadata.METADATA_KEY_ARTIST,
+                        mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST),
+                    )
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
+                    .putBitmap(
+                        MediaMetadata.METADATA_KEY_ALBUM_ART,
+                        BitmapFactory.decodeByteArray(picture, 0, picture!!.size),
+                    )
+                    .build(),
+                duration.toLong(),
+                uri,
+            )
 
-            Audio audio =
-                    new Audio(
-                            id,
-                            new MediaMetadataCompat.Builder()
-                                    .putString(
-                                            MediaMetadata.METADATA_KEY_MEDIA_ID, String.valueOf(id))
-                                    .putString(
-                                            MediaMetadata.METADATA_KEY_DISPLAY_TITLE,
-                                            mediaMetadataRetriever.extractMetadata(
-                                                    MediaMetadataRetriever.METADATA_KEY_TITLE))
-                                    .putString(
-                                            MediaMetadata.METADATA_KEY_TITLE,
-                                            mediaMetadataRetriever.extractMetadata(
-                                                    MediaMetadataRetriever.METADATA_KEY_TITLE))
-                                    .putString(
-                                            MediaMetadata.METADATA_KEY_ARTIST,
-                                            mediaMetadataRetriever.extractMetadata(
-                                                    MediaMetadataRetriever.METADATA_KEY_ARTIST))
-                                    .putLong(
-                                            MediaMetadata.METADATA_KEY_DURATION,
-                                            Long.parseLong(duration))
-                                    .putBitmap(
-                                            MediaMetadata.METADATA_KEY_ALBUM_ART,
-                                            BitmapFactory.decodeByteArray(
-                                                    picture,
-                                                    0,
-                                                    Objects.requireNonNull(picture).length))
-                                    .build(),
-                            Long.parseLong(duration),
-                            uri);
+            mediaMetadataRetriever.close()
 
-            mediaMetadataRetriever.close();
-
-            return audio;
-
-        } catch (IOException | IllegalStateException | NullPointerException e) {
-            e.printStackTrace();
+            return audio
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
 
-        return null;
+        return null
     }
 
-    private static long extractId(Context context, String duration, Uri uri) {
+    private fun extractId(context: Context, duration: String, uri: Uri): Long {
+        val cursor = context.applicationContext
+            .contentResolver
+            .query(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                } else {
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                },
+                arrayOf(MediaStore.Audio.Media._ID),
+                MediaStore.Audio.Media.DURATION + " = ?",
+                arrayOf(duration),
+                null,
+            ) ?: return -1
 
-        Cursor cursor =
-                context.getApplicationContext()
-                        .getContentResolver()
-                        .query(
-                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-                                        ? MediaStore.Audio.Media.getContentUri(
-                                                MediaStore.VOLUME_EXTERNAL)
-                                        : MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                                new String[] {
-                                    MediaStore.Audio.Media._ID,
-                                },
-                                MediaStore.Audio.Media.DURATION + " = ?",
-                                new String[] {duration},
-                                null);
+        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
 
-        if (cursor == null) return -1;
-
-        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID);
-
-        //noinspection LoopStatementThatDoesntLoop
         while (cursor.moveToNext()) {
-
-            long id = cursor.getLong(idColumn);
-
-            cursor.close();
-
-            return id;
+            val id = cursor.getLong(idColumn)
+            cursor.close()
+            return id
         }
 
-        return -1;
+        return -1
     }
 
-    private static Audio fetchMetadata(Context context, String duration, Uri uri)
-            throws IllegalArgumentException {
+    private fun fetchMetadata(context: Context, duration: String, uri: Uri?): Audio? {
+        if (uri == null) return null
 
-        Cursor cursor =
-                context.getApplicationContext()
-                        .getContentResolver()
-                        .query(
-                                Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
-                                        ? MediaStore.Audio.Media.getContentUri(
-                                                MediaStore.VOLUME_EXTERNAL)
-                                        : MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                                new String[] {
-                                    MediaStore.Audio.Media._ID,
-                                    MediaStore.Audio.Media.DISPLAY_NAME,
-                                    MediaStore.Audio.Media.ARTIST,
-                                    MediaStore.Audio.Media.DURATION,
-                                },
-                                MediaStore.Audio.Media.DURATION + " = ?",
-                                new String[] {duration},
-                                null);
+        val cursor = context.applicationContext
+            .contentResolver
+            .query(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+                } else {
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                },
+                arrayOf(
+                    MediaStore.Audio.Media._ID,
+                    MediaStore.Audio.Media.DISPLAY_NAME,
+                    MediaStore.Audio.Media.ARTIST,
+                    MediaStore.Audio.Media.DURATION,
+                ),
+                MediaStore.Audio.Media.DURATION + " = ?",
+                arrayOf(duration),
+                null,
+            ) ?: return null
 
-        if (cursor == null) return null;
+        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
+        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
+        val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION)
+        val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.ARTIST)
 
-        int idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID);
-
-        int nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME);
-
-        int durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION);
-
-        int artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.ARTIST);
-
-        //noinspection LoopStatementThatDoesntLoop
         while (cursor.moveToNext()) {
+            val id = cursor.getLong(idColumn)
 
-            long id = cursor.getLong(idColumn);
+            val contentUri = ContentUris.withAppendedId(
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                id,
+            )
 
-            Uri contentUri =
-                    ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, id);
+            val d = cursor.getInt(durationColumn)
 
-            int d = cursor.getInt(durationColumn);
-
-            String name = cursor.getString(nameColumn);
-
+            var name = cursor.getString(nameColumn)
             if (name != null) {
-                int index = name.lastIndexOf(".");
-
-                if (index > -1) name = name.substring(0, index);
+                val index = name.lastIndexOf(".")
+                if (index > -1) name = name.substring(0, index)
             }
+            if (name == null || name == "<unknown>") name = extractName(uri)
 
-            if (name == null || name.equals("<unknown>")) name = extractName(uri);
+            var artist = cursor.getString(artistColumn)
+            if (artist == null || artist == "<unknown>") artist = "<Unknown Artist>"
 
-            String artist = cursor.getString(artistColumn);
+            cursor.close()
 
-            if (artist == null || artist.equals("<unknown>")) artist = "<Unknown Artist>";
-
-            cursor.close();
-
-            return new Audio(
-                    id,
-                    new MediaMetadataCompat.Builder()
-                            .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, String.valueOf(id))
-                            .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
-                            .putString(MediaMetadata.METADATA_KEY_TITLE, name)
-                            .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
-                            .putLong(MediaMetadata.METADATA_KEY_DURATION, Long.parseLong(duration))
-                            .putString(
-                                    MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
-                                    "content://media/external/audio/media/" + id + "/albumart")
-                            .build(),
-                    d,
-                    contentUri);
+            return Audio(
+                id,
+                MediaMetadataCompat.Builder()
+                    .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, id.toString())
+                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
+                    .putString(MediaMetadata.METADATA_KEY_TITLE, name)
+                    .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
+                    .putString(
+                        MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
+                        "content://media/external/audio/media/$id/albumart",
+                    )
+                    .build(),
+                d.toLong(),
+                contentUri,
+            )
         }
 
-        return null;
+        return null
     }
 
-    private static String extractName(Uri uri) {
+    private fun extractName(uri: Uri): String {
         try {
+            val lastPathSegment = uri.lastPathSegment
+            val split = URLDecoder.decode(lastPathSegment, "UTF-8").split("/")
 
-            String lastPathSegment = uri.getLastPathSegment();
+            if (split.isEmpty()) return "<Unknown Title>"
 
-            String[] split = URLDecoder.decode(lastPathSegment, "UTF-8").split("/");
+            val name = split[split.size - 1].replace("%20", " ")
+            val index = name.lastIndexOf(".")
 
-            if (split.length == 0) return "<Unknown Title>";
-
-            String name = split[split.length - 1].replace("%20", " ");
-
-            int index = name.lastIndexOf(".");
-
-            if (index > -1) return name.substring(0, index);
-
-            return name;
-
-        } catch (Exception e) {
-            e.printStackTrace();
+            return if (index > -1) name.substring(0, index) else name
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
 
-        return "<Unknown Title>";
+        return "<Unknown Title>"
     }
 
-    /**
-     * <a href="https://stackoverflow.com/a/36062748/9652621"/></a>
-     *
-     * @param context - context
-     * @param drawableId - drawable res id
-     * @return - Uri String
-     * @noinspection SameParameterValue
-     */
-    private static String getUriToDrawable(@NonNull Context context, @AnyRes int drawableId) {
-        return ContentResolver.SCHEME_ANDROID_RESOURCE
-                + "://"
-                + context.getResources().getResourcePackageName(drawableId)
-                + '/'
-                + context.getResources().getResourceTypeName(drawableId)
-                + '/'
-                + context.getResources().getResourceEntryName(drawableId);
+    private fun getUriToDrawable(context: Context, @AnyRes drawableId: Int): String {
+        return ContentResolver.SCHEME_ANDROID_RESOURCE +
+            "://" +
+            context.resources.getResourcePackageName(drawableId) +
+            '/' +
+            context.resources.getResourceTypeName(drawableId) +
+            '/' +
+            context.resources.getResourceEntryName(drawableId)
     }
 }

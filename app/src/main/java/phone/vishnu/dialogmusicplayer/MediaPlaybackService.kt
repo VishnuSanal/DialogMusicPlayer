@@ -17,590 +17,562 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package phone.vishnu.dialogmusicplayer;
+package phone.vishnu.dialogmusicplayer
 
-import static android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT;
+import android.annotation.SuppressLint
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
+import android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT
+import android.media.MediaPlayer
+import android.net.Uri
+import android.os.AsyncTask
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.service.media.MediaBrowserService
+import android.support.v4.media.MediaBrowserCompat
+import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import androidx.media.MediaBrowserServiceCompat
+import androidx.media.session.MediaButtonReceiver
+import java.io.IOException
 
-import android.annotation.SuppressLint;
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.media.AudioAttributes;
-import android.media.AudioFocusRequest;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.Handler;
-import android.service.media.MediaBrowserService;
-import android.support.v4.media.MediaBrowserCompat;
-import android.support.v4.media.MediaMetadataCompat;
-import android.support.v4.media.session.MediaSessionCompat;
-import android.support.v4.media.session.PlaybackStateCompat;
-import android.util.Log;
-import androidx.annotation.NonNull;
-import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
-import androidx.media.MediaBrowserServiceCompat;
-import androidx.media.session.MediaButtonReceiver;
-import java.io.IOException;
-import java.util.List;
+class MediaPlaybackService : MediaBrowserServiceCompat(), AudioManager.OnAudioFocusChangeListener {
 
-public class MediaPlaybackService extends MediaBrowserServiceCompat
-        implements AudioManager.OnAudioFocusChangeListener {
+    private lateinit var mediaSession: MediaSessionCompat
+    private lateinit var mediaPlayer: MediaPlayer
+    private var audio: Audio? = null
 
-    private static final int NOTIFICATION_ID = 2;
+    private var isPlayingOnceInProgress = false
+    private var wasPlayingWhenLosingAudioFocus = false
 
-    private static final String LOG_TAG = "DMP";
-    private static final String MY_EMPTY_MEDIA_ROOT_ID = "empty_root_id";
+    private val becomingNoisyReceiver = BecomingNoisyReceiver()
+    private val mediaButtonActionReceiver = MediaButtonActionReceiver()
+    private val notificationReceiver = NotificationReceiver()
 
-    private static final int REQUEST_CODE = 200;
+    override fun onCreate() {
+        super.onCreate()
 
-    private static final String ACTION_PLAY_PAUSE = "phone.vishnu.dialogmusicplayer.playPause";
-    private static final String ACTION_REPLAY = "phone.vishnu.dialogmusicplayer.replay";
-    private static final String ACTION_CANCEL = "phone.vishnu.dialogmusicplayer.cancel";
-    private static final String ACTION_REWIND = "phone.vishnu.dialogmusicplayer.rewind";
-    private static final String ACTION_SEEK = "phone.vishnu.dialogmusicplayer.seek";
-
-    private final BecomingNoisyReceiver becomingNoisyReceiver = new BecomingNoisyReceiver();
-    private final MediaButtonActionReceiver mediaButtonActionReceiver =
-            new MediaButtonActionReceiver();
-    private final NotificationReceiver notificationReceiver = new NotificationReceiver();
-
-    private MediaSessionCompat mediaSession;
-    private MediaPlayer mediaPlayer;
-    private Audio audio;
-
-    private boolean isPlayingOnceInProgress = false, wasPlayingWhenLosingAudioFocus = false;
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-
-        mediaSession = new MediaSessionCompat(this, LOG_TAG);
-
-        mediaPlayer = new MediaPlayer();
+        mediaSession = MediaSessionCompat(this, LOG_TAG)
+        mediaPlayer = MediaPlayer()
 
         mediaSession.setFlags(
-                MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS
-                        | MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+            MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
+                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS,
+        )
 
         mediaSession.setPlaybackState(
-                new PlaybackStateCompat.Builder()
-                        .setActions(
-                                PlaybackStateCompat.ACTION_PLAY
-                                        | PlaybackStateCompat.ACTION_PLAY_PAUSE
-                                        | PlaybackStateCompat.ACTION_PAUSE
-                                        | PlaybackStateCompat.ACTION_SEEK_TO
-                                        | PlaybackStateCompat.ACTION_STOP)
-                        .build());
+            PlaybackStateCompat.Builder()
+                .setActions(
+                    PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                        PlaybackStateCompat.ACTION_PAUSE or
+                        PlaybackStateCompat.ACTION_SEEK_TO or
+                        PlaybackStateCompat.ACTION_STOP,
+                )
+                .build(),
+        )
 
-        mediaSession.setCallback(
-                new MediaSessionCompat.Callback() {
+        mediaSession.setCallback(object : MediaSessionCompat.Callback() {
 
-                    Handler updateHandler;
-                    Runnable updateRunnable;
-                    private AudioFocusRequest audioFocusRequest;
+            var updateHandler: Handler? = null
+            var updateRunnable: Runnable? = null
+            private var audioFocusRequest: AudioFocusRequest? = null
 
-                    @SuppressLint("UnspecifiedRegisterReceiverFlag")
-                    @Override
-                    public void onPlayFromUri(Uri uri, Bundle extras) {
-                        super.onPlayFromUri(uri, extras);
+            @SuppressLint("UnspecifiedRegisterReceiverFlag")
+            override fun onPlayFromUri(uri: Uri?, extras: Bundle?) {
+                super.onPlayFromUri(uri, extras)
 
-                        try {
+                try {
+                    mediaPlayer.reset()
 
-                            mediaPlayer.reset();
+                    mediaPlayer.setDataSource(this@MediaPlaybackService, uri!!)
+                    mediaPlayer.setOnPreparedListener { mp ->
+                        if (requestFocus()) {
+                            startService(
+                                Intent(this@MediaPlaybackService, MediaBrowserService::class.java),
+                            )
+                            mediaSession.isActive = true
+                            mediaPlayer.start()
 
-                            mediaPlayer.setDataSource(MediaPlaybackService.this, uri);
-                            mediaPlayer.setOnPreparedListener(
-                                    mp -> {
-                                        if (requestFocus()) {
+                            setPlaybackState(PlaybackStateCompat.STATE_PLAYING, -1f)
 
-                                            startService(
-                                                    new Intent(
-                                                            MediaPlaybackService.this,
-                                                            MediaBrowserService.class));
-                                            mediaSession.setActive(true);
-                                            mediaPlayer.start();
+                            val notificationFilter = IntentFilter()
+                            notificationFilter.addAction(ACTION_PLAY_PAUSE)
+                            notificationFilter.addAction(ACTION_REPLAY)
+                            notificationFilter.addAction(ACTION_CANCEL)
+                            notificationFilter.addAction(ACTION_REWIND)
+                            notificationFilter.addAction(ACTION_SEEK)
 
-                                            setPlaybackState(PlaybackStateCompat.STATE_PLAYING, -1);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                registerReceiver(
+                                    becomingNoisyReceiver,
+                                    IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+                                    RECEIVER_NOT_EXPORTED,
+                                )
+                                registerReceiver(
+                                    mediaButtonActionReceiver,
+                                    IntentFilter(Intent.ACTION_MEDIA_BUTTON),
+                                    RECEIVER_NOT_EXPORTED,
+                                )
+                                registerReceiver(
+                                    notificationReceiver,
+                                    notificationFilter,
+                                    RECEIVER_NOT_EXPORTED,
+                                )
+                            } else {
+                                registerReceiver(
+                                    becomingNoisyReceiver,
+                                    IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY),
+                                )
+                                registerReceiver(
+                                    mediaButtonActionReceiver,
+                                    IntentFilter(Intent.ACTION_MEDIA_BUTTON),
+                                )
+                                registerReceiver(notificationReceiver, notificationFilter)
+                            }
 
-                                            IntentFilter notificationFilter = new IntentFilter();
-                                            notificationFilter.addAction(ACTION_PLAY_PAUSE);
-                                            notificationFilter.addAction(ACTION_REPLAY);
-                                            notificationFilter.addAction(ACTION_CANCEL);
-                                            notificationFilter.addAction(ACTION_REWIND);
-                                            notificationFilter.addAction(ACTION_SEEK);
+                            audio = AudioUtils.getMetaData(
+                                this@MediaPlaybackService,
+                                mediaPlayer.duration.toString(),
+                                uri,
+                            )
 
-                                            if (Build.VERSION.SDK_INT
-                                                    >= Build.VERSION_CODES.TIRAMISU) {
+                            Log.e("vishnu", "onPlayFromUri(): $audio")
 
-                                                registerReceiver(
-                                                        becomingNoisyReceiver,
-                                                        new IntentFilter(
-                                                                AudioManager
-                                                                        .ACTION_AUDIO_BECOMING_NOISY),
-                                                        RECEIVER_NOT_EXPORTED);
+                            mediaSession.setMetadata(audio!!.mediaMetadata)
 
-                                                registerReceiver(
-                                                        mediaButtonActionReceiver,
-                                                        new IntentFilter(
-                                                                Intent.ACTION_MEDIA_BUTTON),
-                                                        RECEIVER_NOT_EXPORTED);
+                            updateHandler!!.postDelayed(updateRunnable!!, 0)
 
-                                                registerReceiver(
-                                                        notificationReceiver,
-                                                        notificationFilter,
-                                                        RECEIVER_NOT_EXPORTED);
-                                            } else {
-
-                                                registerReceiver(
-                                                        becomingNoisyReceiver,
-                                                        new IntentFilter(
-                                                                AudioManager
-                                                                        .ACTION_AUDIO_BECOMING_NOISY));
-
-                                                registerReceiver(
-                                                        mediaButtonActionReceiver,
-                                                        new IntentFilter(
-                                                                Intent.ACTION_MEDIA_BUTTON));
-
-                                                registerReceiver(
-                                                        notificationReceiver, notificationFilter);
-                                            }
-
-                                            audio =
-                                                    AudioUtils.getMetaData(
-                                                            MediaPlaybackService.this,
-                                                            String.valueOf(
-                                                                    mediaPlayer.getDuration()),
-                                                            uri);
-
-                                            Log.e("vishnu", "onPlayFromUri(): " + audio);
-
-                                            mediaSession.setMetadata(audio.getMediaMetadata());
-
-                                            updateHandler.postDelayed(updateRunnable, 0);
-
-                                            startForeground(NOTIFICATION_ID, getNotification());
-                                        }
-                                    });
-
-                            mediaPlayer.prepareAsync();
-                        } catch (IOException e) {
-                            Log.e("vishnu", "initTasks -> Uri: " + uri, e);
-                            throw new RuntimeException(
-                                    "Failed to play the requested file with Uri: " + uri);
-                        }
-
-                        updateHandler = new Handler();
-                        updateRunnable =
-                                new Runnable() {
-                                    @Override
-                                    public void run() {
-
-                                        if (mediaPlayer == null) return;
-
-                                        setPlaybackState(-1, -1);
-
-                                        updateHandler.postDelayed(this, 10);
-                                    }
-                                };
-                    }
-
-                    private boolean requestFocus() {
-                        AudioManager audioManager =
-                                (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            audioFocusRequest =
-                                    new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
-                                            .setOnAudioFocusChangeListener(
-                                                    MediaPlaybackService.this)
-                                            .setAudioAttributes(
-                                                    new AudioAttributes.Builder()
-                                                            .setContentType(
-                                                                    AudioAttributes
-                                                                            .CONTENT_TYPE_MUSIC)
-                                                            .build())
-                                            .build();
-
-                            return audioManager.requestAudioFocus(audioFocusRequest)
-                                    == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
-                        }
-                        return audioManager.requestAudioFocus(
-                                        MediaPlaybackService.this,
-                                        AudioManager.STREAM_MUSIC,
-                                        AudioManager.AUDIOFOCUS_GAIN)
-                                == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
-                    }
-
-                    @Override
-                    public void onPlay() {
-                        super.onPlay();
-
-                        mediaPlayer.start();
-
-                        setPlaybackState(PlaybackStateCompat.STATE_PLAYING, -1);
-
-                        updateHandler.postDelayed(updateRunnable, 10);
-
-                        startForeground(NOTIFICATION_ID, getNotification());
-                    }
-
-                    @Override
-                    public void onPause() {
-                        super.onPause();
-
-                        mediaPlayer.pause();
-
-                        setPlaybackState(PlaybackStateCompat.STATE_PAUSED, -1);
-
-                        stopForeground(false);
-
-                        updateHandler.removeCallbacks(updateRunnable);
-
-                        startForeground(NOTIFICATION_ID, getNotification());
-                    }
-
-                    @Override
-                    public void onStop() {
-
-                        savePosition();
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                            ((AudioManager) getSystemService(Context.AUDIO_SERVICE))
-                                    .abandonAudioFocusRequest(audioFocusRequest);
-
-                        mediaSession.setActive(false);
-
-                        mediaPlayer.release();
-                        updateHandler.removeCallbacks(updateRunnable);
-
-                        stopSelf();
-
-                        stopForeground(true);
-
-                        sendBroadcast(new Intent(MainActivity.KILL_APP_KEY));
-                    }
-
-                    @Override
-                    public void onSeekTo(long pos) {
-                        super.onSeekTo(pos);
-
-                        mediaPlayer.seekTo((int) pos);
-                    }
-
-                    @Override
-                    public void onSetPlaybackSpeed(float speed) {
-                        super.onSetPlaybackSpeed(speed);
-
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            mediaPlayer.setPlaybackParams(
-                                    mediaPlayer.getPlaybackParams().setSpeed(speed));
-
-                            setPlaybackState(-1, speed);
+                            startForeground(NOTIFICATION_ID, getNotification())
                         }
                     }
 
-                    @Override
-                    public void onSetRepeatMode(int repeatMode) {
-                        super.onSetRepeatMode(repeatMode);
+                    mediaPlayer.prepareAsync()
+                } catch (e: IOException) {
+                    Log.e("vishnu", "initTasks -> Uri: $uri", e)
+                    throw RuntimeException("Failed to play the requested file with Uri: $uri")
+                }
 
-                        mediaSession.setRepeatMode(repeatMode);
+                updateHandler = Handler()
+                updateRunnable = object : Runnable {
+                    override fun run() {
+                        if (!::mediaPlayer.isInitialized) return
+
+                        setPlaybackState(-1, -1f)
+
+                        updateHandler!!.postDelayed(this, 10)
+                    }
+                }
+            }
+
+            private fun requestFocus(): Boolean {
+                val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+
+                return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                        .setOnAudioFocusChangeListener(this@MediaPlaybackService)
+                        .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build(),
+                        )
+                        .build()
+
+                    audioManager.requestAudioFocus(audioFocusRequest!!) ==
+                        AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+                } else {
+                    @Suppress("DEPRECATION")
+                    audioManager.requestAudioFocus(
+                        this@MediaPlaybackService,
+                        AudioManager.STREAM_MUSIC,
+                        AudioManager.AUDIOFOCUS_GAIN,
+                    ) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+                }
+            }
+
+            override fun onPlay() {
+                super.onPlay()
+
+                mediaPlayer.start()
+
+                setPlaybackState(PlaybackStateCompat.STATE_PLAYING, -1f)
+
+                updateHandler!!.postDelayed(updateRunnable!!, 10)
+
+                startForeground(NOTIFICATION_ID, getNotification())
+            }
+
+            override fun onPause() {
+                super.onPause()
+
+                mediaPlayer.pause()
+
+                setPlaybackState(PlaybackStateCompat.STATE_PAUSED, -1f)
+
+                @Suppress("DEPRECATION")
+                stopForeground(false)
+
+                updateHandler!!.removeCallbacks(updateRunnable!!)
+
+                startForeground(NOTIFICATION_ID, getNotification())
+            }
+
+            override fun onStop() {
+                savePosition()
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    (getSystemService(Context.AUDIO_SERVICE) as AudioManager)
+                        .abandonAudioFocusRequest(audioFocusRequest!!)
+                }
+
+                mediaSession.isActive = false
+
+                mediaPlayer.release()
+                updateHandler!!.removeCallbacks(updateRunnable!!)
+
+                stopSelf()
+
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+
+                sendBroadcast(Intent(MainActivity.KILL_APP_KEY))
+            }
+
+            override fun onSeekTo(pos: Long) {
+                super.onSeekTo(pos)
+                mediaPlayer.seekTo(pos.toInt())
+            }
+
+            override fun onSetPlaybackSpeed(speed: Float) {
+                super.onSetPlaybackSpeed(speed)
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    mediaPlayer.playbackParams = mediaPlayer.playbackParams.setSpeed(speed)
+                    setPlaybackState(-1, speed)
+                }
+            }
+
+            override fun onSetRepeatMode(repeatMode: Int) {
+                super.onSetRepeatMode(repeatMode)
+                mediaSession.setRepeatMode(repeatMode)
+            }
+
+            override fun onCustomAction(action: String?, extras: Bundle?) {
+                super.onCustomAction(action, extras)
+                notificationReceiver.onReceive(
+                    this@MediaPlaybackService,
+                    Intent(action).apply { if (extras != null) putExtras(extras) },
+                )
+            }
+        })
+
+        mediaPlayer.setOnCompletionListener {
+            setPlaybackState(PlaybackStateCompat.STATE_STOPPED, -1f)
+
+            startForeground(NOTIFICATION_ID, getNotification())
+
+            val state = mediaSession.controller.repeatMode
+
+            if (state == PlaybackStateCompat.REPEAT_MODE_ONE) {
+                if (!isPlayingOnceInProgress) {
+                    isPlayingOnceInProgress = true
+
+                    if (mediaPlayer.currentPosition == mediaPlayer.duration) {
+                        mediaPlayer.seekTo(0)
                     }
 
-                    @Override
-                    public void onCustomAction(String action, Bundle extras) {
-                        super.onCustomAction(action, extras);
-                        notificationReceiver.onReceive(
-                                MediaPlaybackService.this, new Intent(action).putExtras(extras));
-                    }
-                });
+                    mediaSession.controller.transportControls.play()
+                } else {
+                    isPlayingOnceInProgress = false
+                }
+            } else if (state == PlaybackStateCompat.REPEAT_MODE_ALL) {
+                if (mediaPlayer.currentPosition == mediaPlayer.duration) {
+                    mediaPlayer.seekTo(0)
+                }
 
-        mediaPlayer.setOnCompletionListener(
-                mp -> {
-                    setPlaybackState(PlaybackStateCompat.STATE_STOPPED, -1);
+                mediaSession.controller.transportControls.play()
+            }
+        }
 
-                    startForeground(NOTIFICATION_ID, getNotification());
-
-                    int state = mediaSession.getController().getRepeatMode();
-
-                    if (state == PlaybackStateCompat.REPEAT_MODE_ONE) {
-
-                        if (!isPlayingOnceInProgress) {
-
-                            isPlayingOnceInProgress = true;
-
-                            if (mediaPlayer.getCurrentPosition() == mediaPlayer.getDuration())
-                                mediaPlayer.seekTo(0);
-
-                            mediaSession.getController().getTransportControls().play();
-
-                        } else isPlayingOnceInProgress = false;
-
-                    } else if (state == PlaybackStateCompat.REPEAT_MODE_ALL) {
-
-                        if (mediaPlayer.getCurrentPosition() == mediaPlayer.getDuration())
-                            mediaPlayer.seekTo(0);
-
-                        mediaSession.getController().getTransportControls().play();
-                    }
-                });
-
-        setSessionToken(mediaSession.getSessionToken());
+        sessionToken = mediaSession.sessionToken
     }
 
-    private void savePosition() {
+    private fun savePosition() {
+        Log.e("vishnu", "savePosition() called")
 
-        Log.e("vishnu", "savePosition() called");
+        val id = audio?.id ?: return
 
-        long id = audio.getId();
+        if (id == -1L || !mediaSession.isActive) return
 
-        if (id == -1 || !mediaSession.isActive()) return;
+        val currentPosition = mediaPlayer.currentPosition
+        val duration = mediaPlayer.duration
 
-        int currentPosition = mediaPlayer.getCurrentPosition();
-        int duration = mediaPlayer.getDuration();
+        Log.e("vishnu", "savePosition: $currentPosition / $duration")
 
-        Log.e("vishnu", "savePosition: " + currentPosition + " / " + duration);
+        @Suppress("DEPRECATION")
+        AsyncTask.execute {
+            val saveItemRepository = SaveItemRepository(application)
 
-        AsyncTask.execute(
-                () -> {
-                    SaveItemRepository saveItemRepository =
-                            new SaveItemRepository(getApplication());
-
-                    if (currentPosition != duration)
-                        saveItemRepository.insertSaveItem(new SaveItem(id, currentPosition));
-                    else saveItemRepository.deleteSaveItem(new SaveItem(id, currentPosition));
-                });
+            if (currentPosition != duration) {
+                saveItemRepository.insertSaveItem(SaveItem(id, currentPosition.toLong()))
+            } else {
+                saveItemRepository.deleteSaveItem(SaveItem(id, currentPosition.toLong()))
+            }
+        }
     }
 
-    @Override
-    public void onDestroy() {
-        unregisterReceiver(becomingNoisyReceiver);
-        unregisterReceiver(mediaButtonActionReceiver);
-        unregisterReceiver(notificationReceiver);
-        super.onDestroy();
+    override fun onDestroy() {
+        unregisterReceiver(becomingNoisyReceiver)
+        unregisterReceiver(mediaButtonActionReceiver)
+        unregisterReceiver(notificationReceiver)
+        super.onDestroy()
     }
 
-    private Notification getNotification() {
-
+    private fun getNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationChannel = NotificationChannel(
+                "DMPChannel",
+                "DialogMusicPlayer",
+                NotificationManager.IMPORTANCE_LOW,
+            )
+            notificationChannel.description = "Default notification channel for DialogMusicPlayer"
+            notificationChannel.lockscreenVisibility = Notification.VISIBILITY_PUBLIC
 
-            NotificationChannel notificationChannel =
-                    new NotificationChannel(
-                            "DMPChannel", "DialogMusicPlayer", NotificationManager.IMPORTANCE_LOW);
-            notificationChannel.setDescription(
-                    "Default notification channel for DialogMusicPlayer");
-            notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
-
-            getSystemService(NotificationManager.class)
-                    .createNotificationChannel(notificationChannel);
+            getSystemService(NotificationManager::class.java)
+                .createNotificationChannel(notificationChannel)
         }
 
-        // https://stackoverflow.com/questions/63501425/java-android-media-player-notification
-        NotificationCompat.Builder builder =
-                new NotificationCompat.Builder(MediaPlaybackService.this, "DMPChannel")
-                        .setStyle(
-                                new androidx.media.app.NotificationCompat.MediaStyle()
-                                        .setMediaSession(mediaSession.getSessionToken())
-                                        .setShowCancelButton(true)
-                                        .setCancelButtonIntent(getPendingIntent(ACTION_CANCEL))
-                                        .setShowActionsInCompactView(0, 1, 2))
-                        .setColor(
-                                ContextCompat.getColor(
-                                        MediaPlaybackService.this, R.color.notificationBGColor))
-                        .setSmallIcon(R.drawable.icon_fg)
-                        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                        .setOnlyAlertOnce(true)
-                        .setPriority(NotificationCompat.PRIORITY_LOW)
-                        .setContentIntent(
-                                PendingIntent.getActivity(
-                                        this,
-                                        REQUEST_CODE,
-                                        new Intent(this, MainActivity.class)
-                                                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                                                .putExtra(
-                                                        MainActivity.NOTIFICATION_CLICK_KEY, true),
-                                        PendingIntent.FLAG_CANCEL_CURRENT
-                                                | PendingIntent.FLAG_IMMUTABLE))
-                        .setContentTitle("DMP")
-                        .setContentTitle(
-                                audio.getMediaMetadata()
-                                        .getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE))
-                        .setContentText(
-                                audio.getMediaMetadata()
-                                        .getText(MediaMetadataCompat.METADATA_KEY_ARTIST))
-                        .setAutoCancel(false)
-                        .setDeleteIntent(
-                                MediaButtonReceiver.buildMediaButtonPendingIntent(
-                                        this, PlaybackStateCompat.ACTION_STOP))
-                        .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
-                        .setLargeIcon(
-                                audio.getMediaMetadata()
-                                        .getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART))
-                        .addAction(
-                                new NotificationCompat.Action(
-                                        R.drawable.ic_rewind,
-                                        "Rewind",
-                                        getPendingIntent(ACTION_REWIND)))
-                        .addAction(
-                                mediaSession.getController().getPlaybackState().getState()
-                                                == PlaybackStateCompat.STATE_STOPPED
-                                        ? new NotificationCompat.Action(
-                                                R.drawable.ic_replay,
-                                                "Replay",
-                                                getPendingIntent(ACTION_REPLAY))
-                                        : mediaSession.getController().getPlaybackState().getState()
-                                                        == PlaybackStateCompat.STATE_PLAYING
-                                                ? new NotificationCompat.Action(
-                                                        R.drawable.ic_pause,
-                                                        "Pause",
-                                                        getPendingIntent(ACTION_PLAY_PAUSE))
-                                                : new NotificationCompat.Action(
-                                                        R.drawable.ic_play,
-                                                        "Play",
-                                                        getPendingIntent(ACTION_PLAY_PAUSE)))
-                        .addAction(
-                                new NotificationCompat.Action(
-                                        R.drawable.ic_seek, "Seek", getPendingIntent(ACTION_SEEK)))
-                        .addAction(
-                                new NotificationCompat.Action(
-                                        R.drawable.ic_clear,
-                                        "Close",
-                                        getPendingIntent(ACTION_CANCEL)));
+        val builder = NotificationCompat.Builder(this@MediaPlaybackService, "DMPChannel")
+            .setStyle(
+                androidx.media.app.NotificationCompat.MediaStyle()
+                    .setMediaSession(mediaSession.sessionToken)
+                    .setShowCancelButton(true)
+                    .setCancelButtonIntent(getPendingIntent(ACTION_CANCEL))
+                    .setShowActionsInCompactView(0, 1, 2),
+            )
+            .setColor(ContextCompat.getColor(this@MediaPlaybackService, R.color.notificationBGColor))
+            .setSmallIcon(R.drawable.icon_fg)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOnlyAlertOnce(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(
+                PendingIntent.getActivity(
+                    this,
+                    REQUEST_CODE,
+                    Intent(this, MainActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                        .putExtra(MainActivity.NOTIFICATION_CLICK_KEY, true),
+                    PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                ),
+            )
+            .setContentTitle(
+                audio!!.mediaMetadata!!
+                    .getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE),
+            )
+            .setContentText(
+                audio!!.mediaMetadata!!
+                    .getText(MediaMetadataCompat.METADATA_KEY_ARTIST),
+            )
+            .setAutoCancel(false)
+            .setDeleteIntent(
+                MediaButtonReceiver.buildMediaButtonPendingIntent(
+                    this,
+                    PlaybackStateCompat.ACTION_STOP,
+                ),
+            )
+            .setCategory(NotificationCompat.CATEGORY_TRANSPORT)
+            .setLargeIcon(
+                audio!!.mediaMetadata!!
+                    .getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
+            )
+            .addAction(
+                NotificationCompat.Action(
+                    R.drawable.ic_rewind,
+                    "Rewind",
+                    getPendingIntent(ACTION_REWIND),
+                ),
+            )
+            .addAction(
+                when (mediaSession.controller.playbackState.state) {
+                    PlaybackStateCompat.STATE_STOPPED ->
+                        NotificationCompat.Action(
+                            R.drawable.ic_replay,
+                            "Replay",
+                            getPendingIntent(ACTION_REPLAY),
+                        )
+                    PlaybackStateCompat.STATE_PLAYING ->
+                        NotificationCompat.Action(
+                            R.drawable.ic_pause,
+                            "Pause",
+                            getPendingIntent(ACTION_PLAY_PAUSE),
+                        )
+                    else ->
+                        NotificationCompat.Action(
+                            R.drawable.ic_play,
+                            "Play",
+                            getPendingIntent(ACTION_PLAY_PAUSE),
+                        )
+                },
+            )
+            .addAction(
+                NotificationCompat.Action(
+                    R.drawable.ic_seek,
+                    "Seek",
+                    getPendingIntent(ACTION_SEEK),
+                ),
+            )
+            .addAction(
+                NotificationCompat.Action(
+                    R.drawable.ic_clear,
+                    "Close",
+                    getPendingIntent(ACTION_CANCEL),
+                ),
+            )
 
-        return builder.build();
+        return builder.build()
     }
 
-    private PendingIntent getPendingIntent(String action) {
+    private fun getPendingIntent(action: String): PendingIntent {
         return PendingIntent.getBroadcast(
-                this,
-                REQUEST_CODE,
-                new Intent(action).setPackage(getPackageName()),
-                PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            this,
+            REQUEST_CODE,
+            Intent(action).setPackage(packageName),
+            PendingIntent.FLAG_CANCEL_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
-    /**
-     * @param playbackState current playback state - pass -1 if unchanged, to default to the current
-     *     value
-     * @param playbackSpeed current playback speed - pass -1 if unchanged, to default to the current
-     *     value
-     */
-    private void setPlaybackState(int playbackState, float playbackSpeed) {
+    private fun setPlaybackState(playbackState: Int, playbackSpeed: Float) {
+        if (!mediaSession.isActive) return
 
-        if (!mediaSession.isActive()) return;
+        val state = if (playbackState == -1) {
+            mediaSession.controller.playbackState.state
+        } else {
+            playbackState
+        }
 
-        if (playbackState == -1)
-            playbackState = mediaSession.getController().getPlaybackState().getState();
-
-        if (playbackSpeed == -1)
-            playbackSpeed =
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
-                            ? mediaPlayer.getPlaybackParams().getSpeed()
-                            : 1F;
+        val speed = if (playbackSpeed == -1f) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                mediaPlayer.playbackParams.speed
+            } else {
+                1f
+            }
+        } else {
+            playbackSpeed
+        }
 
         mediaSession.setPlaybackState(
-                new PlaybackStateCompat.Builder()
-                        .setState(playbackState, mediaPlayer.getCurrentPosition(), playbackSpeed)
-                        .setActions(
-                                PlaybackStateCompat.ACTION_PLAY
-                                        | PlaybackStateCompat.ACTION_PLAY_PAUSE
-                                        | PlaybackStateCompat.ACTION_PAUSE
-                                        | PlaybackStateCompat.ACTION_SEEK_TO
-                                        | PlaybackStateCompat.ACTION_STOP)
-                        .addCustomAction(ACTION_REWIND, "Rewind", R.drawable.ic_rewind)
-                        .addCustomAction(ACTION_SEEK, "Seek", R.drawable.ic_seek)
-                        .addCustomAction(ACTION_CANCEL, "Cancel", R.drawable.ic_clear)
-                        .build());
+            PlaybackStateCompat.Builder()
+                .setState(state, mediaPlayer.currentPosition.toLong(), speed)
+                .setActions(
+                    PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_PLAY_PAUSE or
+                        PlaybackStateCompat.ACTION_PAUSE or
+                        PlaybackStateCompat.ACTION_SEEK_TO or
+                        PlaybackStateCompat.ACTION_STOP,
+                )
+                .addCustomAction(ACTION_REWIND, "Rewind", R.drawable.ic_rewind)
+                .addCustomAction(ACTION_SEEK, "Seek", R.drawable.ic_seek)
+                .addCustomAction(ACTION_CANCEL, "Cancel", R.drawable.ic_clear)
+                .build(),
+        )
     }
 
-    @Override
-    public BrowserRoot onGetRoot(
-            @NonNull String clientPackageName, int clientUid, Bundle rootHints) {
-        return new BrowserRoot(MY_EMPTY_MEDIA_ROOT_ID, null);
+    override fun onGetRoot(
+        clientPackageName: String,
+        clientUid: Int,
+        rootHints: Bundle?,
+    ): BrowserRoot {
+        return BrowserRoot(MY_EMPTY_MEDIA_ROOT_ID, null)
     }
 
-    @Override
-    public void onLoadChildren(
-            @NonNull final String parentMediaId,
-            final Result<List<MediaBrowserCompat.MediaItem>> result) {
-        //        if (TextUtils.equals(MY_EMPTY_MEDIA_ROOT_ID, parentMediaId))
-        result.sendResult(null);
+    override fun onLoadChildren(
+        parentMediaId: String,
+        result: Result<List<MediaBrowserCompat.MediaItem>>,
+    ) {
+        result.sendResult(null)
     }
 
-    @Override
-    public void onAudioFocusChange(int focusChange) {
-        if (wasPlayingWhenLosingAudioFocus && focusChange == AudioManager.AUDIOFOCUS_GAIN
-                || focusChange == AudioManager.AUDIOFOCUS_GAIN_TRANSIENT) {
-            mediaSession.getController().getTransportControls().play();
-            wasPlayingWhenLosingAudioFocus = false;
-        } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS
-                || focusChange == AUDIOFOCUS_LOSS_TRANSIENT) {
-            mediaSession.getController().getTransportControls().pause();
-            wasPlayingWhenLosingAudioFocus = mediaPlayer != null && mediaPlayer.isPlaying();
+    override fun onAudioFocusChange(focusChange: Int) {
+        if (wasPlayingWhenLosingAudioFocus && focusChange == AudioManager.AUDIOFOCUS_GAIN ||
+            focusChange == AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+        ) {
+            mediaSession.controller.transportControls.play()
+            wasPlayingWhenLosingAudioFocus = false
+        } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS ||
+            focusChange == AUDIOFOCUS_LOSS_TRANSIENT
+        ) {
+            mediaSession.controller.transportControls.pause()
+            wasPlayingWhenLosingAudioFocus = mediaPlayer.isPlaying
         }
     }
 
-    class BecomingNoisyReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction()))
-                mediaSession.getController().getTransportControls().pause();
+    inner class BecomingNoisyReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY == intent.action) {
+                mediaSession.controller.transportControls.pause()
+            }
         }
     }
 
-    class MediaButtonActionReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (!Intent.ACTION_MEDIA_BUTTON.equals(intent.getAction())) return;
+    inner class MediaButtonActionReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (Intent.ACTION_MEDIA_BUTTON != intent.action) return
 
-            if (mediaSession.getController().getPlaybackState().getState()
-                    == PlaybackStateCompat.STATE_PLAYING)
-                mediaSession.getController().getTransportControls().pause();
-            else if (mediaSession.getController().getPlaybackState().getState()
-                    == PlaybackStateCompat.STATE_PAUSED)
-                mediaSession.getController().getTransportControls().play();
+            if (mediaSession.controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING) {
+                mediaSession.controller.transportControls.pause()
+            } else if (mediaSession.controller.playbackState.state == PlaybackStateCompat.STATE_PAUSED) {
+                mediaSession.controller.transportControls.play()
+            }
         }
     }
 
-    class NotificationReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (ACTION_PLAY_PAUSE.equals(intent.getAction())) {
-                if (mediaSession.getController().getPlaybackState().getState()
-                        == PlaybackStateCompat.STATE_PLAYING)
-                    mediaSession.getController().getTransportControls().pause();
-                else if (mediaSession.getController().getPlaybackState().getState()
-                        == PlaybackStateCompat.STATE_PAUSED)
-                    mediaSession.getController().getTransportControls().play();
-
-                startForeground(NOTIFICATION_ID, getNotification());
-            } else if (ACTION_REPLAY.equals(intent.getAction()))
-                mediaSession.getController().getTransportControls().play();
-            else if (ACTION_CANCEL.equals(intent.getAction()))
-                mediaSession.getController().getTransportControls().stop();
-            else if (ACTION_REWIND.equals(intent.getAction()))
-                mediaSession
-                        .getController()
-                        .getTransportControls()
-                        .seekTo(
-                                mediaSession.getController().getPlaybackState().getPosition()
-                                        - 10000);
-            else if (ACTION_SEEK.equals(intent.getAction()))
-                mediaSession
-                        .getController()
-                        .getTransportControls()
-                        .seekTo(
-                                mediaSession.getController().getPlaybackState().getPosition()
-                                        + 10000);
+    inner class NotificationReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                ACTION_PLAY_PAUSE -> {
+                    if (mediaSession.controller.playbackState.state == PlaybackStateCompat.STATE_PLAYING) {
+                        mediaSession.controller.transportControls.pause()
+                    } else if (mediaSession.controller.playbackState.state == PlaybackStateCompat.STATE_PAUSED) {
+                        mediaSession.controller.transportControls.play()
+                    }
+                    startForeground(NOTIFICATION_ID, getNotification())
+                }
+                ACTION_REPLAY -> mediaSession.controller.transportControls.play()
+                ACTION_CANCEL -> mediaSession.controller.transportControls.stop()
+                ACTION_REWIND -> mediaSession.controller.transportControls.seekTo(
+                    mediaSession.controller.playbackState.position - 10000,
+                )
+                ACTION_SEEK -> mediaSession.controller.transportControls.seekTo(
+                    mediaSession.controller.playbackState.position + 10000,
+                )
+            }
         }
+    }
+
+    companion object {
+        private const val NOTIFICATION_ID = 2
+        private const val LOG_TAG = "DMP"
+        private const val MY_EMPTY_MEDIA_ROOT_ID = "empty_root_id"
+        private const val REQUEST_CODE = 200
+
+        private const val ACTION_PLAY_PAUSE = "phone.vishnu.dialogmusicplayer.playPause"
+        private const val ACTION_REPLAY = "phone.vishnu.dialogmusicplayer.replay"
+        private const val ACTION_CANCEL = "phone.vishnu.dialogmusicplayer.cancel"
+        private const val ACTION_REWIND = "phone.vishnu.dialogmusicplayer.rewind"
+        private const val ACTION_SEEK = "phone.vishnu.dialogmusicplayer.seek"
     }
 }

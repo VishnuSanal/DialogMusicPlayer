@@ -17,25 +17,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package phone.vishnu.dialogmusicplayer;
+package phone.vishnu.dialogmusicplayer
 
-import android.content.Context;
-import android.os.Build;
-import androidx.core.content.ContextCompat;
+import android.content.Context
+import android.os.Build
+import androidx.core.content.ContextCompat
 
-public class ColorUtils {
+object ColorUtils {
 
-    public static int getAccentColor(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            return ContextCompat.getColor(context, R.color.material_dynamic_primary40);
-
-        return ContextCompat.getColor(context, R.color.accentColor);
+    @JvmStatic
+    fun getAccentColor(context: Context): Int {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.getColor(context, R.color.material_dynamic_primary40)
+        } else {
+            ContextCompat.getColor(context, R.color.accentColor)
+        }
     }
 
-    public static int getAccentColorLight(Context context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            return ContextCompat.getColor(context, R.color.material_dynamic_primary60);
-
-        return ContextCompat.getColor(context, R.color.accentColor);
+    @JvmStatic
+    fun getAccentColorLight(context: Context): Int {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.getColor(context, R.color.material_dynamic_primary60)
+        } else {
+            ContextCompat.getColor(context, R.color.accentColor)
+        }
     }
 }
