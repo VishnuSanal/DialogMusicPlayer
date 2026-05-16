@@ -23,11 +23,11 @@ import android.media.MediaMetadata
 import android.net.Uri
 import android.support.v4.media.MediaMetadataCompat
 
-class Audio(
-    var id: Long = 0,
-    var mediaMetadata: MediaMetadataCompat? = null,
-    var duration: Long = 0,
-    var uri: Uri? = null,
+data class Audio(
+    val id: Long = 0,
+    val mediaMetadata: MediaMetadataCompat? = null,
+    val duration: Long = 0,
+    val uri: Uri? = null,
 ) {
     override fun toString(): String {
         return "Audio[" +

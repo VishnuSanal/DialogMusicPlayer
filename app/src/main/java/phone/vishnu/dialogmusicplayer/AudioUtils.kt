@@ -30,216 +30,198 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.support.v4.media.MediaMetadataCompat
+import android.util.Log
 import androidx.annotation.AnyRes
 import java.net.URLDecoder
 import java.util.concurrent.atomic.AtomicReference
 
 object AudioUtils {
 
-    @JvmStatic
+    private const val TAG = "DMP"
+    private const val UNKNOWN_TITLE = "<Unknown Title>"
+    private const val UNKNOWN_ARTIST = "<Unknown Artist>"
+
     fun getMetaData(context: Context, duration: String, uri: Uri): Audio {
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                val audio = retrieveMetadata(context, duration, uri)
-                if (audio != null) return audio
-            }
+            retrieveMetadata(context, duration, uri)?.let { return it }
 
-            val audio = fetchMetadata(context, duration, uri)
-            if (audio != null) return audio
+            fetchMetadata(context, duration, uri)?.let { return it }
 
             val contentUri = AtomicReference<Uri>()
-
             MediaScannerConnection.scanFile(
                 context,
                 arrayOf(uri.path),
                 null,
             ) { _, resultUri -> contentUri.set(resultUri) }
 
-            val scannedAudio = fetchMetadata(context, duration, contentUri.get())
-            if (scannedAudio != null) return scannedAudio
+            fetchMetadata(context, duration, contentUri.get())?.let { return it }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(TAG, "getMetaData() failed for $uri", e)
         }
 
         val name = extractName(uri)
 
         return Audio(
-            -1,
-            MediaMetadataCompat.Builder()
+            id = -1,
+            mediaMetadata = MediaMetadataCompat.Builder()
                 .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, "-1")
                 .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
                 .putString(MediaMetadata.METADATA_KEY_TITLE, name)
-                .putString(MediaMetadata.METADATA_KEY_ARTIST, "<Unknown Artist>")
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, UNKNOWN_ARTIST)
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
                 .putString(
                     MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
                     getUriToDrawable(context, R.drawable.icon_fg),
                 )
                 .build(),
-            duration.toLong(),
-            uri,
+            duration = duration.toLong(),
+            uri = uri,
         )
     }
 
     private fun retrieveMetadata(context: Context, duration: String, uri: Uri): Audio? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
 
+        val retriever = MediaMetadataRetriever()
         try {
-            val mediaMetadataRetriever = MediaMetadataRetriever()
-            mediaMetadataRetriever.setDataSource(context, uri)
+            retriever.setDataSource(context, uri)
 
-            val picture = mediaMetadataRetriever.embeddedPicture
+            val title = retriever
+                .extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+                ?.takeIf { it.isNotBlank() }
+                ?: extractName(uri)
+
+            val artist = retriever
+                .extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+                ?.takeIf { it.isNotBlank() }
+                ?: UNKNOWN_ARTIST
 
             val id = extractId(context, duration, uri)
 
-            val audio = Audio(
-                id,
-                MediaMetadataCompat.Builder()
-                    .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, id.toString())
-                    .putString(
-                        MediaMetadata.METADATA_KEY_DISPLAY_TITLE,
-                        mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
-                    )
-                    .putString(
-                        MediaMetadata.METADATA_KEY_TITLE,
-                        mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE),
-                    )
-                    .putString(
-                        MediaMetadata.METADATA_KEY_ARTIST,
-                        mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST),
-                    )
-                    .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
-                    .putBitmap(
-                        MediaMetadata.METADATA_KEY_ALBUM_ART,
-                        BitmapFactory.decodeByteArray(picture, 0, picture!!.size),
-                    )
-                    .build(),
-                duration.toLong(),
-                uri,
-            )
+            val builder = MediaMetadataCompat.Builder()
+                .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, id.toString())
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, title)
+                .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
 
-            mediaMetadataRetriever.close()
+            val picture = retriever.embeddedPicture
+            if (picture != null) {
+                builder.putBitmap(
+                    MediaMetadata.METADATA_KEY_ALBUM_ART,
+                    BitmapFactory.decodeByteArray(picture, 0, picture.size),
+                )
+            } else if (id != -1L) {
+                builder.putString(
+                    MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
+                    "content://media/external/audio/media/$id/albumart",
+                )
+            }
 
-            return audio
+            return Audio(id, builder.build(), duration.toLong(), uri)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(TAG, "retrieveMetadata() failed for $uri", e)
+            return null
+        } finally {
+            retriever.release()
         }
-
-        return null
     }
 
     private fun extractId(context: Context, duration: String, uri: Uri): Long {
-        val cursor = context.applicationContext
-            .contentResolver
-            .query(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-                } else {
-                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-                },
-                arrayOf(MediaStore.Audio.Media._ID),
-                MediaStore.Audio.Media.DURATION + " = ?",
-                arrayOf(duration),
-                null,
-            ) ?: return -1
-
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
-
-        while (cursor.moveToNext()) {
-            val id = cursor.getLong(idColumn)
-            cursor.close()
-            return id
+        context.applicationContext.contentResolver.query(
+            audioCollectionUri(),
+            arrayOf(MediaStore.Audio.Media._ID),
+            "${MediaStore.Audio.Media.DURATION} = ?",
+            arrayOf(duration),
+            null,
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            if (cursor.moveToNext()) return cursor.getLong(idColumn)
         }
-
         return -1
     }
 
     private fun fetchMetadata(context: Context, duration: String, uri: Uri?): Audio? {
         if (uri == null) return null
 
-        val cursor = context.applicationContext
-            .contentResolver
-            .query(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-                } else {
-                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
-                },
-                arrayOf(
-                    MediaStore.Audio.Media._ID,
-                    MediaStore.Audio.Media.DISPLAY_NAME,
-                    MediaStore.Audio.Media.ARTIST,
-                    MediaStore.Audio.Media.DURATION,
-                ),
-                MediaStore.Audio.Media.DURATION + " = ?",
-                arrayOf(duration),
-                null,
-            ) ?: return null
+        context.applicationContext.contentResolver.query(
+            audioCollectionUri(),
+            arrayOf(
+                MediaStore.Audio.Media._ID,
+                MediaStore.Audio.Media.DISPLAY_NAME,
+                MediaStore.Audio.Media.ARTIST,
+                MediaStore.Audio.Media.DURATION,
+            ),
+            "${MediaStore.Audio.Media.DURATION} = ?",
+            arrayOf(duration),
+            null,
+        )?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
+            val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
 
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media._ID)
-        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DISPLAY_NAME)
-        val durationColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DURATION)
-        val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.ARTIST)
+            if (cursor.moveToNext()) {
+                val id = cursor.getLong(idColumn)
+                val contentUri =
+                    ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
 
-        while (cursor.moveToNext()) {
-            val id = cursor.getLong(idColumn)
+                var name = cursor.getString(nameColumn)
+                if (name != null) {
+                    val index = name.lastIndexOf(".")
+                    if (index > -1) name = name.substring(0, index)
+                }
+                if (name.isNullOrBlank() || name == "<unknown>") name = extractName(uri)
 
-            val contentUri = ContentUris.withAppendedId(
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                id,
-            )
+                var artist = cursor.getString(artistColumn)
+                if (artist.isNullOrBlank() || artist == "<unknown>") artist = UNKNOWN_ARTIST
 
-            val d = cursor.getInt(durationColumn)
-
-            var name = cursor.getString(nameColumn)
-            if (name != null) {
-                val index = name.lastIndexOf(".")
-                if (index > -1) name = name.substring(0, index)
+                return Audio(
+                    id,
+                    MediaMetadataCompat.Builder()
+                        .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, id.toString())
+                        .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
+                        .putString(MediaMetadata.METADATA_KEY_TITLE, name)
+                        .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
+                        .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
+                        .putString(
+                            MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
+                            "content://media/external/audio/media/$id/albumart",
+                        )
+                        .build(),
+                    cursor.getInt(durationColumn).toLong(),
+                    contentUri,
+                )
             }
-            if (name == null || name == "<unknown>") name = extractName(uri)
-
-            var artist = cursor.getString(artistColumn)
-            if (artist == null || artist == "<unknown>") artist = "<Unknown Artist>"
-
-            cursor.close()
-
-            return Audio(
-                id,
-                MediaMetadataCompat.Builder()
-                    .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, id.toString())
-                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
-                    .putString(MediaMetadata.METADATA_KEY_TITLE, name)
-                    .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
-                    .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
-                    .putString(
-                        MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
-                        "content://media/external/audio/media/$id/albumart",
-                    )
-                    .build(),
-                d.toLong(),
-                contentUri,
-            )
         }
 
         return null
     }
 
+    private fun audioCollectionUri(): Uri {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            MediaStore.Audio.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
+        } else {
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        }
+    }
+
     private fun extractName(uri: Uri): String {
         try {
-            val lastPathSegment = uri.lastPathSegment
+            val lastPathSegment = uri.lastPathSegment ?: return UNKNOWN_TITLE
             val split = URLDecoder.decode(lastPathSegment, "UTF-8").split("/")
 
-            if (split.isEmpty()) return "<Unknown Title>"
+            if (split.isEmpty()) return UNKNOWN_TITLE
 
-            val name = split[split.size - 1].replace("%20", " ")
+            val name = split.last().replace("%20", " ")
             val index = name.lastIndexOf(".")
 
             return if (index > -1) name.substring(0, index) else name
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(TAG, "extractName() failed for $uri", e)
         }
 
-        return "<Unknown Title>"
+        return UNKNOWN_TITLE
     }
 
     private fun getUriToDrawable(context: Context, @AnyRes drawableId: Int): String {

@@ -38,15 +38,18 @@ import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.text.TextUtils
 import android.text.method.ScrollingMovementMethod
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.IntentCompat
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.slider.Slider
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
@@ -68,7 +71,18 @@ class MainActivity : AppCompatActivity() {
 
     private var isTimeReversed = false
     private var totalDuration = 0
-    private var id = -1L
+    private var trackId = -1L
+
+    // Guards against re-seeking to the saved position every time metadata is
+    // re-delivered (e.g. on configuration change / re-registering the callback).
+    private var lastResumedId = -1L
+
+    /** Convenience accessors so we stop repeating the verbose static lookup. */
+    private val mediaController: MediaControllerCompat?
+        get() = MediaControllerCompat.getMediaController(this)
+
+    private val transportControls: MediaControllerCompat.TransportControls?
+        get() = mediaController?.transportControls
 
     private val controllerCallback = object : MediaControllerCompat.Callback() {
 
@@ -76,12 +90,8 @@ class MainActivity : AppCompatActivity() {
             super.onMetadataChanged(metadata)
             metadata ?: return
 
-            try {
-                id = metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID).toLong()
-            } catch (e: NumberFormatException) {
-                id = -1
-                e.printStackTrace()
-            }
+            trackId = metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
+                ?.toLongOrNull() ?: -1L
 
             fileNameTV.text = metadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE)
             artistNameTV.text = metadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST)
@@ -90,27 +100,13 @@ class MainActivity : AppCompatActivity() {
             )
 
             totalDuration = metadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION).toInt()
-
             durationTV.text = getFormattedTime(totalDuration.toLong(), isTimeReversed)
 
             if (totalDuration > 0) slider.valueTo = totalDuration.toFloat()
 
-            if (id != -1L) {
-                viewModel.getSaveItem(id).observe(this@MainActivity) { saveItem ->
-                    val saveTime = saveItem.duration
-
-                    if (saveTime != 0L) {
-                        MediaControllerCompat.getMediaController(this@MainActivity)
-                            .transportControls
-                            .seekTo(saveTime)
-
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Resuming playback from ${getFormattedTime(saveTime, false)}",
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                }
+            if (trackId != -1L && trackId != lastResumedId) {
+                lastResumedId = trackId
+                observeSavedPosition(trackId)
             }
         }
 
@@ -119,8 +115,7 @@ class MainActivity : AppCompatActivity() {
             state ?: return
 
             val position = state.position
-
-            if (position >= slider.valueFrom && position <= slider.valueTo) {
+            if (position in slider.valueFrom.toLong()..slider.valueTo.toLong()) {
                 slider.value = position.toFloat()
             }
 
@@ -129,8 +124,10 @@ class MainActivity : AppCompatActivity() {
             when (state.state) {
                 PlaybackStateCompat.STATE_PLAYING ->
                     playPauseButton.setImageResource(R.drawable.ic_pause)
+
                 PlaybackStateCompat.STATE_PAUSED ->
                     playPauseButton.setImageResource(R.drawable.ic_play)
+
                 PlaybackStateCompat.STATE_STOPPED ->
                     playPauseButton.setImageResource(R.drawable.ic_replay)
             }
@@ -159,28 +156,32 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(killReceiver, IntentFilter(KILL_APP_KEY))
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED &&
-                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-            ) {
-                initTasks(intent)
-            } else {
-                requestPermissions(
-                    arrayOf(
-                        Manifest.permission.READ_MEDIA_AUDIO,
-                        Manifest.permission.POST_NOTIFICATIONS,
-                    ),
-                    0,
-                )
-            }
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-                initTasks(intent)
-            } else {
-                requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 0)
-            }
-        } else {
+        requestPermissionsThenStart()
+    }
+
+    private fun requestPermissionsThenStart() {
+        val required = requiredPermissions()
+
+        val missing = required.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missing.isEmpty()) {
             initTasks(intent)
+        } else {
+            ActivityCompat.requestPermissions(this, missing.toTypedArray(), PERMISSION_REQUEST_CODE)
+        }
+    }
+
+    private fun requiredPermissions(): List<String> {
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
+                listOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
+
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ->
+                listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+
+            else -> emptyList()
         }
     }
 
@@ -191,14 +192,12 @@ class MainActivity : AppCompatActivity() {
 
         volumeControlStream = AudioManager.STREAM_MUSIC
 
-        MediaControllerCompat.getMediaController(this@MainActivity)
-            ?.registerCallback(controllerCallback)
+        mediaController?.registerCallback(controllerCallback)
     }
 
     override fun onStop() {
         super.onStop()
-        MediaControllerCompat.getMediaController(this@MainActivity)
-            ?.unregisterCallback(controllerCallback)
+        mediaController?.unregisterCallback(controllerCallback)
     }
 
     override fun onDestroy() {
@@ -209,8 +208,7 @@ class MainActivity : AppCompatActivity() {
 
         // hack!
         // can't fix notification from getting destroyed on app exit even with the music playing :(
-        MediaControllerCompat.getMediaController(this)
-            ?.transportControls?.stop()
+        transportControls?.stop()
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -225,26 +223,27 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == 0) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initTasks(intent)
+        if (requestCode != PERMISSION_REQUEST_CODE) return
+
+        val allGranted = grantResults.isNotEmpty() &&
+            grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+
+        if (allGranted) {
+            initTasks(intent)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE)) {
+                Toast.makeText(
+                    this,
+                    "Storage permission denied\nPlease grant necessary permissions",
+                    Toast.LENGTH_LONG,
+                ).show()
+                requestPermissionsThenStart()
             } else {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    if (shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                        Toast.makeText(
-                            this,
-                            "Storage permission denied\nPlease grant necessary permissions",
-                            Toast.LENGTH_LONG,
-                        ).show()
-                        requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 0)
-                    } else {
-                        Toast.makeText(
-                            this,
-                            "Storage permission denied\nPlease grant permission from settings",
-                            Toast.LENGTH_LONG,
-                        ).show()
-                    }
-                }
+                Toast.makeText(
+                    this,
+                    "Permission denied\nPlease grant permission from settings",
+                    Toast.LENGTH_LONG,
+                ).show()
             }
         }
     }
@@ -254,145 +253,128 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initTasks(intent: Intent) {
-        Log.e("vishnu", "initTasks Intent#getAction: ${intent.action}")
-
-        if (Intent.ACTION_VIEW == intent.action || Intent.ACTION_SEND == intent.action) {
-            @Suppress("DEPRECATION")
-            val uri: Uri? = if (Intent.ACTION_VIEW == intent.action) {
-                intent.data
-            } else {
-                intent.extras?.get(Intent.EXTRA_STREAM) as? Uri
+        if (Intent.ACTION_VIEW != intent.action && Intent.ACTION_SEND != intent.action) {
+            if (!intent.hasExtra(NOTIFICATION_CLICK_KEY)) {
+                showFatalError(intent.action)
             }
+            return
+        }
 
-            Log.e("vishnu", "initTasks:$uri")
+        val uri: Uri? = if (Intent.ACTION_VIEW == intent.action) {
+            intent.data
+        } else {
+            IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+        }
 
-            if (uri == null) {
-                Toast.makeText(
-                    this,
-                    "Oops! Something went wrong\n\n${intent.action}",
-                    Toast.LENGTH_LONG,
-                ).show()
-                finish()
-                return
-            }
+        if (uri == null) {
+            showFatalError(intent.action)
+            return
+        }
 
-            if (mediaBrowser == null) {
-                mediaBrowser = MediaBrowserCompat(
-                    this,
-                    ComponentName(this, MediaPlaybackService::class.java),
-                    object : MediaBrowserCompat.ConnectionCallback() {
-                        override fun onConnected() {
-                            val token = mediaBrowser!!.sessionToken
-
-                            val mediaController = MediaControllerCompat(this@MainActivity, token)
-
-                            MediaControllerCompat.setMediaController(this@MainActivity, mediaController)
-
-                            buildTransportControls()
-
-                            MediaControllerCompat.getMediaController(this@MainActivity)
-                                .transportControls
-                                .playFromUri(uri, null)
-                        }
-
-                        override fun onConnectionSuspended() {
-                            // The Service has crashed. Disable transport controls until it
-                            // automatically reconnects
-                        }
-
-                        override fun onConnectionFailed() {
-                            // The Service has refused our connection
-                        }
-                    },
-                    null,
-                )
-                mediaBrowser!!.connect()
-            } else {
-                MediaControllerCompat.getMediaController(this@MainActivity)
-                    .transportControls
-                    .playFromUri(uri, null)
-
-                val playbackSpeed = MediaControllerCompat.getMediaController(this@MainActivity)
-                    .playbackState
-                    .playbackSpeed
-
-                if (playbackSpeed != 0f) {
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls
-                        .setPlaybackSpeed(playbackSpeed)
-                }
-
-                MediaControllerCompat.getMediaController(this@MainActivity)
-                    .transportControls
-                    .setRepeatMode(
-                        MediaControllerCompat.getMediaController(this@MainActivity).repeatMode,
-                    )
-            }
-        } else if (!intent.hasExtra(NOTIFICATION_CLICK_KEY)) {
-            Toast.makeText(
-                this,
-                "Oops! Something went wrong\n\n${intent.action}",
-                Toast.LENGTH_LONG,
-            ).show()
-            finish()
+        if (mediaBrowser == null) {
+            connectAndPlay(uri)
+        } else {
+            playUri(uri)
         }
     }
 
-    fun buildTransportControls() {
-        playPauseButton.setOnClickListener {
-            val playBackState = MediaControllerCompat.getMediaController(this@MainActivity)
-                .playbackState
-                .state
+    private fun showFatalError(action: String?) {
+        Toast.makeText(this, "Oops! Something went wrong\n\n$action", Toast.LENGTH_LONG).show()
+        finish()
+    }
 
-            when (playBackState) {
+    private fun connectAndPlay(uri: Uri) {
+        mediaBrowser = MediaBrowserCompat(
+            this,
+            ComponentName(this, MediaPlaybackService::class.java),
+            object : MediaBrowserCompat.ConnectionCallback() {
+                override fun onConnected() {
+                    val browser = mediaBrowser ?: return
+                    val mediaController = MediaControllerCompat(this@MainActivity, browser.sessionToken)
+                    MediaControllerCompat.setMediaController(this@MainActivity, mediaController)
+
+                    buildTransportControls()
+
+                    transportControls?.playFromUri(uri, null)
+                }
+
+                override fun onConnectionSuspended() {
+                    // The service has crashed; transport controls become no-ops
+                    // until MediaBrowser reconnects automatically.
+                }
+
+                override fun onConnectionFailed() {
+                    // The service refused the connection.
+                }
+            },
+            null,
+        ).also { it.connect() }
+    }
+
+    private fun playUri(uri: Uri) {
+        val controller = mediaController ?: return
+        controller.transportControls.playFromUri(uri, null)
+
+        val playbackSpeed = controller.playbackState?.playbackSpeed ?: 0f
+        if (playbackSpeed != 0f) {
+            controller.transportControls.setPlaybackSpeed(playbackSpeed)
+        }
+
+        controller.transportControls.setRepeatMode(controller.repeatMode)
+    }
+
+    private fun buildTransportControls() {
+        playPauseButton.setOnClickListener {
+            when (mediaController?.playbackState?.state) {
                 PlaybackStateCompat.STATE_PLAYING -> {
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls.pause()
+                    transportControls?.pause()
                     playPauseButton.setImageResource(R.drawable.ic_play)
                 }
+
                 PlaybackStateCompat.STATE_PAUSED -> {
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls.play()
+                    transportControls?.play()
                     playPauseButton.setImageResource(R.drawable.ic_pause)
                 }
+
                 PlaybackStateCompat.STATE_STOPPED -> {
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls.seekTo(0)
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls.play()
+                    transportControls?.seekTo(0)
+                    transportControls?.play()
                     playPauseButton.setImageResource(R.drawable.ic_pause)
                 }
             }
         }
 
         slider.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) {
-                MediaControllerCompat.getMediaController(this@MainActivity)
-                    .transportControls
-                    .seekTo(value.toInt().toLong())
-            }
+            if (fromUser) transportControls?.seekTo(value.toLong())
         }
 
         rewindIV.setOnClickListener {
-            MediaControllerCompat.getMediaController(this@MainActivity)
-                .transportControls
-                .seekTo(
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .playbackState.position - 10000,
-                )
+            val position = mediaController?.playbackState?.position ?: return@setOnClickListener
+            transportControls?.seekTo(position - SEEK_STEP_MS)
         }
 
         seekIV.setOnClickListener {
-            MediaControllerCompat.getMediaController(this@MainActivity)
-                .transportControls
-                .seekTo(
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .playbackState.position + 10000,
-                )
+            val position = mediaController?.playbackState?.position ?: return@setOnClickListener
+            transportControls?.seekTo(position + SEEK_STEP_MS)
         }
 
-        MediaControllerCompat.getMediaController(this@MainActivity)
-            .registerCallback(controllerCallback)
+        // Registered here so the very first (post-connection) callback is wired
+        // up; onResume/onStop take over for subsequent foreground transitions.
+        mediaController?.registerCallback(controllerCallback)
+    }
+
+    private fun observeSavedPosition(id: Long) {
+        viewModel.getSaveItem(id).observe(this) { saveItem ->
+            val saveTime = saveItem.duration
+            if (saveTime != 0L) {
+                transportControls?.seekTo(saveTime)
+                Toast.makeText(
+                    this,
+                    "Resuming playback from ${getFormattedTime(saveTime, false)}",
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
     }
 
     private fun initViews() {
@@ -413,21 +395,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initColors() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Log.e("vishnu", "isDynamicColorAvailable()")
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
-            val colorAccent = ColorUtils.getAccentColor(this)
-            val colorAccentLight = ColorUtils.getAccentColorLight(this)
+        val colorAccent = ColorUtils.getAccentColor(this)
+        val colorAccentLight = ColorUtils.getAccentColorLight(this)
 
-            playPauseButton.setColorFilter(colorAccent)
+        playPauseButton.setColorFilter(colorAccent)
+        rewindIV.setColorFilter(colorAccentLight)
+        seekIV.setColorFilter(colorAccentLight)
 
-            rewindIV.setColorFilter(colorAccentLight)
-            seekIV.setColorFilter(colorAccentLight)
-
-            slider.thumbStrokeColor = ColorStateList.valueOf(colorAccent)
-            slider.trackActiveTintList = ColorStateList.valueOf(colorAccent)
-            slider.haloTintList = ColorStateList.valueOf(colorAccentLight)
-        }
+        slider.thumbStrokeColor = ColorStateList.valueOf(colorAccent)
+        slider.trackActiveTintList = ColorStateList.valueOf(colorAccent)
+        slider.haloTintList = ColorStateList.valueOf(colorAccentLight)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -436,92 +415,79 @@ class MainActivity : AppCompatActivity() {
 
         slider.setLabelFormatter { value -> getFormattedTime(value.toLong(), isTimeReversed) }
 
-        playbackSpeedTV.setOnClickListener {
-            val speed = MediaControllerCompat.getMediaController(this@MainActivity)
-                .playbackState
-                .playbackSpeed
+        playbackSpeedTV.setOnClickListener { cyclePlaybackSpeed() }
 
-            when (speed) {
-                0.5f -> {
-                    playbackSpeedTV.setText(R.string.zero_seven_five_x)
-                    playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this))
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls.setPlaybackSpeed(0.75f)
-                }
-                0.75f -> {
-                    playbackSpeedTV.setText(R.string.one_x)
-                    @Suppress("DEPRECATION")
-                    playbackSpeedTV.setTextColor(resources.getColor(R.color.textColorLight))
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls.setPlaybackSpeed(1f)
-                }
-                1.0f -> {
-                    playbackSpeedTV.setText(R.string.one_two_five_x)
-                    playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this))
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls.setPlaybackSpeed(1.25f)
-                }
-                1.25f -> {
-                    playbackSpeedTV.setText(R.string.one_five_x)
-                    playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this))
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls.setPlaybackSpeed(1.5f)
-                }
-                1.5f -> {
-                    playbackSpeedTV.setText(R.string.two_x)
-                    playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this))
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls.setPlaybackSpeed(2.0f)
-                }
-                2.0f -> {
-                    playbackSpeedTV.setText(R.string.zero_five_x)
-                    playbackSpeedTV.setTextColor(ColorUtils.getAccentColor(this))
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls.setPlaybackSpeed(0.5f)
-                }
-            }
-        }
-
-        repeatIV.setOnClickListener {
-            val state = MediaControllerCompat.getMediaController(this@MainActivity).repeatMode
-
-            when (state) {
-                PlaybackStateCompat.REPEAT_MODE_NONE -> {
-                    repeatIV.setImageResource(R.drawable.ic_repeat_one)
-                    repeatIV.setColorFilter(ColorUtils.getAccentColor(this))
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls
-                        .setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ONE)
-                }
-                PlaybackStateCompat.REPEAT_MODE_ONE -> {
-                    repeatIV.setImageResource(R.drawable.ic_repeat)
-                    repeatIV.setColorFilter(ColorUtils.getAccentColor(this))
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls
-                        .setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ALL)
-                }
-                PlaybackStateCompat.REPEAT_MODE_ALL -> {
-                    repeatIV.setImageResource(R.drawable.ic_repeat)
-                    @Suppress("DEPRECATION")
-                    repeatIV.setColorFilter(resources.getColor(R.color.textColorLight))
-                    MediaControllerCompat.getMediaController(this@MainActivity)
-                        .transportControls
-                        .setRepeatMode(PlaybackStateCompat.REPEAT_MODE_NONE)
-                }
-            }
-        }
+        repeatIV.setOnClickListener { cycleRepeatMode() }
 
         findViewById<View>(R.id.parentRelativeLayout).setOnTouchListener { _, event ->
-            if (event.y < albumArtIV.y ||
+            val childLayout = findViewById<View>(R.id.childConstraintLayout)
+            val tappedOutsideContent = event.y < albumArtIV.y ||
                 (
-                    event.y < findViewById<View>(R.id.childConstraintLayout).y &&
+                    event.y < childLayout.y &&
                         (event.x < albumArtIV.x || event.x > albumArtIV.x + albumArtIV.width)
                     )
-            ) {
+
+            if (tappedOutsideContent) {
                 moveTaskToBack(false)
                 true
             } else {
                 false
+            }
+        }
+    }
+
+    private fun cyclePlaybackSpeed() {
+        val speed = mediaController?.playbackState?.playbackSpeed ?: 1f
+
+        // Cycle 0.5 -> 0.75 -> 1 -> 1.25 -> 1.5 -> 2 -> 0.5 ...
+        val next = when (speed) {
+            0.5f -> 0.75f
+            0.75f -> 1f
+            1.0f -> 1.25f
+            1.25f -> 1.5f
+            1.5f -> 2.0f
+            2.0f -> 0.5f
+            else -> 1f
+        }
+
+        playbackSpeedTV.setText(speedLabelRes(next))
+        playbackSpeedTV.setTextColor(
+            if (next == 1f) {
+                ContextCompat.getColor(this, R.color.textColorLight)
+            } else {
+                ColorUtils.getAccentColor(this)
+            },
+        )
+        transportControls?.setPlaybackSpeed(next)
+    }
+
+    private fun speedLabelRes(speed: Float): Int = when (speed) {
+        0.5f -> R.string.zero_five_x
+        0.75f -> R.string.zero_seven_five_x
+        1.25f -> R.string.one_two_five_x
+        1.5f -> R.string.one_five_x
+        2.0f -> R.string.two_x
+        else -> R.string.one_x
+    }
+
+    private fun cycleRepeatMode() {
+        when (mediaController?.repeatMode) {
+            PlaybackStateCompat.REPEAT_MODE_NONE -> {
+                repeatIV.setImageResource(R.drawable.ic_repeat_one)
+                repeatIV.setColorFilter(ColorUtils.getAccentColor(this))
+                transportControls?.setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ONE)
+            }
+
+            PlaybackStateCompat.REPEAT_MODE_ONE -> {
+                repeatIV.setImageResource(R.drawable.ic_repeat)
+                repeatIV.setColorFilter(ColorUtils.getAccentColor(this))
+                transportControls?.setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ALL)
+            }
+
+            PlaybackStateCompat.REPEAT_MODE_ALL -> {
+                repeatIV.setImageResource(R.drawable.ic_repeat)
+                repeatIV.setColorFilter(ContextCompat.getColor(this, R.color.textColorLight))
+                transportControls?.setRepeatMode(PlaybackStateCompat.REPEAT_MODE_NONE)
             }
         }
     }
@@ -537,36 +503,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setTextViewScrollingBehaviour() {
-        fileNameTV.movementMethod = ScrollingMovementMethod()
-        artistNameTV.movementMethod = ScrollingMovementMethod()
-
-        fileNameTV.isSingleLine = true
-        fileNameTV.setHorizontallyScrolling(true)
-        fileNameTV.ellipsize = TextUtils.TruncateAt.MARQUEE
-        fileNameTV.marqueeRepeatLimit = -1
-        fileNameTV.isSelected = true
-        fileNameTV.setPadding(10, 0, 10, 0)
-
-        artistNameTV.isSingleLine = true
-        artistNameTV.setHorizontallyScrolling(true)
-        artistNameTV.ellipsize = TextUtils.TruncateAt.MARQUEE
-        artistNameTV.marqueeRepeatLimit = -1
-        artistNameTV.isSelected = true
-        artistNameTV.setPadding(10, 0, 10, 0)
+        for (textView in listOf(fileNameTV, artistNameTV)) {
+            textView.movementMethod = ScrollingMovementMethod()
+            textView.isSingleLine = true
+            textView.setHorizontallyScrolling(true)
+            textView.ellipsize = TextUtils.TruncateAt.MARQUEE
+            textView.marqueeRepeatLimit = -1
+            textView.isSelected = true
+            textView.setPadding(10, 0, 10, 0)
+        }
     }
 
-    private fun getFormattedTime(millis: Long, isTimeReversed: Boolean): String {
-        val minutes = (millis / 1000) / 60
-        val seconds = (millis / 1000) % 60
+    private fun getFormattedTime(millis: Long, reversed: Boolean): String {
+        if (reversed) return "-" + getFormattedTime(totalDuration - millis, false)
 
-        val secondsStr = seconds.toString()
-        val secs = if (secondsStr.length >= 2) secondsStr.substring(0, 2) else "0$secondsStr"
-
-        return if (!isTimeReversed) {
-            "$minutes:$secs"
-        } else {
-            "-${getFormattedTime(totalDuration - millis, false)}"
-        }
+        val totalSeconds = millis / 1000
+        return String.format(
+            Locale.getDefault(),
+            "%d:%02d",
+            totalSeconds / 60,
+            totalSeconds % 60,
+        )
     }
 
     private val killReceiver = object : BroadcastReceiver() {
@@ -578,5 +535,8 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val KILL_APP_KEY = "phone.vishnu.dialogmusicplayer.kill"
         const val NOTIFICATION_CLICK_KEY = "phone.vishnu.dialogmusicplayer.notificationClick"
+
+        private const val PERMISSION_REQUEST_CODE = 0
+        private const val SEEK_STEP_MS = 10_000L
     }
 }

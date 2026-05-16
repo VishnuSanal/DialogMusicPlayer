@@ -20,35 +20,35 @@
 package phone.vishnu.dialogmusicplayer
 
 import android.content.Context
-import android.os.AsyncTask
 import android.util.Log
-import java.io.File
-import java.io.IOException
+import java.util.concurrent.Executors
 
 object FileUtils {
 
-    @JvmStatic
+    private const val TAG = "DMP"
+    private const val PREFS_NAME = "dmp_prefs"
+    private const val KEY_LEGACY_FILES_CLEARED = "legacy_files_cleared"
+
+    private val ioExecutor = Executors.newSingleThreadExecutor()
+
+    /**
+     * One-time cleanup of files an older version of the app mistakenly wrote to
+     * internal storage. Runs once per install and is a no-op on every launch
+     * after that — there is no reason to walk the filesystem on every start.
+     *
+     * The previous implementation shelled out to `rm -rf` via [Runtime.exec] on
+     * every `onCreate`, which is slow, fragile and unnecessary.
+     */
     fun clearApplicationData(context: Context) {
-        try {
-            AsyncTask.execute { clear(context) }
-        } catch (e: Exception) {
-            Log.e("vishnu", "clearApplicationData: $e")
-        }
-    }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_LEGACY_FILES_CLEARED, false)) return
 
-    private fun clear(context: Context) {
-        val path = context.filesDir.path
-        val file = File(path)
+        ioExecutor.execute {
+            runCatching {
+                context.filesDir.listFiles()?.forEach { it.deleteRecursively() }
+            }.onFailure { Log.w(TAG, "clearApplicationData() failed", it) }
 
-        if (!file.exists()) return
-
-        val command = "rm -rf $path"
-
-        try {
-            Runtime.getRuntime().exec(command)
-            Log.i("vishnu", "clearApplicationData() Deleted: $path")
-        } catch (e: IOException) {
-            Log.e("vishnu", "clearApplicationData: $e")
+            prefs.edit().putBoolean(KEY_LEGACY_FILES_CLEARED, true).apply()
         }
     }
 }

@@ -45,6 +45,6 @@ interface SaveItemDao {
     @Query("DELETE FROM SaveItem")
     fun deleteAll()
 
-    @Query("SELECT * FROM SaveItem WHERE id = :id")
-    fun getSaveItem(id: Long): SaveItem
+    @Query("SELECT * FROM SaveItem WHERE id = :id LIMIT 1")
+    fun getSaveItem(id: Long): SaveItem?
 }
