@@ -19,27 +19,21 @@
 
 package phone.vishnu.dialogmusicplayer
 
-import android.content.Context
-import android.os.Build
-import androidx.core.content.ContextCompat
+import android.graphics.Bitmap
+import android.support.v4.media.session.PlaybackStateCompat
 
-object ColorUtils {
-
-    @JvmStatic
-    fun getAccentColor(context: Context): Int {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.getColor(context, R.color.material_dynamic_primary40)
-        } else {
-            ContextCompat.getColor(context, R.color.accentColor)
-        }
-    }
-
-    @JvmStatic
-    fun getAccentColorLight(context: Context): Int {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.getColor(context, R.color.material_dynamic_primary60)
-        } else {
-            ContextCompat.getColor(context, R.color.accentColor)
-        }
-    }
+/**
+ * Immutable snapshot of everything the player screen renders. The Activity maps
+ * `MediaControllerCompat` callbacks into this; the Composable just reads it.
+ */
+data class PlayerUiState(
+    val title: String = "",
+    val artist: String = "",
+    val albumArt: Bitmap? = null,
+    val positionMs: Long = 0L,
+    val durationMs: Long = 0L,
+    val playbackState: Int = PlaybackStateCompat.STATE_NONE,
+    val repeatMode: Int = PlaybackStateCompat.REPEAT_MODE_NONE,
+) {
+    val isPlaying: Boolean get() = playbackState == PlaybackStateCompat.STATE_PLAYING
 }

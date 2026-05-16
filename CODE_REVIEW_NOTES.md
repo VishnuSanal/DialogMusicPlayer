@@ -132,16 +132,95 @@ These need their own change / decision and were not touched:
 
 ---
 
-## 6. Recommended next refactor (not done here)
+## 6. Recommended next refactor
 
-The app is still a mixed-concern single `Activity` using `findViewById`.
-Natural next step, best done as its own reviewable PR:
-
-- Adopt **ViewBinding** (`buildFeatures { viewBinding true }`), drop the 11
-  `lateinit` view fields + `initViews()` `findViewById` block.
-- Move playback-state → UI-state mapping into `MainViewModel`, exposing a single
-  observable UI state instead of the Activity reacting to raw
-  `MediaControllerCompat.Callback` events.
+- ~~Adopt ViewBinding / move state into the ViewModel~~ — **superseded by the
+  Jetpack Compose migration below (§7).**
 - Consider migrating off the legacy `MediaBrowserServiceCompat` /
   `MediaSessionCompat` stack to **Media3** (`androidx.media3`), which is the
   current supported library.
+
+---
+
+## 7. Jetpack Compose migration (done)
+
+The whole UI layer was migrated from XML Views to Jetpack Compose.
+
+### Build setup
+- Kotlin `2.0.0` → `2.0.21` (Compose Compiler plugin requires a matching
+  Kotlin version; `2.0.0`'s plugin was not available, `2.0.21` is the closest).
+- KSP `2.0.0-1.0.23` → `2.0.21-1.0.27` (must track the Kotlin version).
+- Added the `org.jetbrains.kotlin.plugin.compose` plugin (`2.0.21`) — mandatory
+  with Kotlin 2.0+.
+- `app/build.gradle`: `buildFeatures { compose true }`, Compose BOM
+  `2024.12.01`, `compose.ui`, `compose.foundation`, `material3`,
+  `activity-compose`, `lifecycle-viewmodel-compose`, `lifecycle-runtime-compose`.
+- `lifecycle-viewmodel-ktx` bumped `2.8.3` → `2.8.6`.
+
+### New files
+- `PlayerUiState.kt` — immutable UI-state snapshot the screen renders.
+- `DmpTheme.kt` — `MaterialTheme` wrapper; dynamic color on API 31+, brand-red
+  accent otherwise (replaces the old `ColorUtils` + XML dynamic-color theme).
+- `PlayerScreen.kt` — the screen as composables: album art, marquee title /
+  artist (`Modifier.basicMarquee()` — replaces the `ScrollingMovementMethod`
+  hack), Material3 `Slider`, transport controls.
+
+### Architecture change
+- `MainViewModel` now owns a `StateFlow<PlayerUiState>`. The
+  `MediaControllerCompat.Callback` in `MainActivity` maps callbacks into that
+  state; the Composable collects it with `collectAsStateWithLifecycle()`.
+- `MainActivity` uses `setContent { ... }`; it keeps only the media-browser
+  plumbing and the dialog-window flags. All the `findViewById` / `lateinit`
+  view fields and the manual view mutation are gone.
+
+### Removed
+- `activity_main.xml` and `layout-v23/activity_main.xml`.
+- `ColorUtils.kt`.
+- The (already `visibility="gone"`) playback-speed UI was not carried over — it
+  was dead UI in the XML version. The service still supports speed changes.
+
+### Not verifiable here
+`assembleDebug` passes, but **the dialog window sizing, dynamic theming, marquee
+animation and the tap-outside-to-background gesture need a visual check on a
+device/emulator** — those can't be confirmed from a build alone.
+
+### Notes / possible follow-ups
+- `styles.xml` still defines the `AppTheme` (the floating-dialog window — still
+  needed) plus now-unused `roundedImageView` / `sliderLabelStyle` styles and the
+  `bottom_sheet_background` drawable. Left in place; harmless, `shrinkResources`
+  drops them from release builds.
+- The album art uses a fixed 220.dp square; the old `ShapeableImageView` was
+  `wrap_content`. Adjust to taste.
+
+---
+
+## 8. Post-migration playback fixes (device-tested)
+
+After the migration the app launched but **would not play** (no audio, no
+metadata, no album art). Diagnosed on a real device (Android 15) via logcat.
+
+Two separate bugs:
+
+### 8.1 Permission check regressed in the refactor
+`onRequestPermissionsResult` required *every* requested permission to be
+granted. On Android 13+ the app requests `READ_MEDIA_AUDIO` **and**
+`POST_NOTIFICATIONS`; denying the (optional) notification permission left
+`initTasks()` uncalled, so nothing connected. Fixed: playback now starts as
+soon as the **essential audio permission** is available — `essentialPermission()`
+/ `hasEssentialPermission()` — and `POST_NOTIFICATIONS` is requested separately
+without gating playback.
+
+### 8.2 Playback gated on audio focus
+`MediaPlaybackService` did `if (!requestFocus()) return` in the prepared
+listener. On the test device `requestAudioFocus()` returned
+`AUDIOFOCUS_REQUEST_FAILED`, so playback silently never started. Fixes:
+- `AudioFocusRequest` now sets `setUsage(AudioAttributes.USAGE_MEDIA)` (it only
+  set `CONTENT_TYPE_MUSIC` before — the system logged `AA=USAGE_UNKNOWN`).
+- Playback no longer aborts when focus is denied — the user explicitly opened a
+  file to play it. Focus is still requested, and `onAudioFocusChange` still
+  handles ducking / pause-on-loss. A denial just logs a warning.
+- The `onPlayFromUri` prepared block is wrapped in `try/catch` and a
+  `setOnErrorListener` was added, so a failure logs instead of silently dying.
+
+Verified on device: file plays, position advances, metadata + embedded album
+art render in the Compose UI.

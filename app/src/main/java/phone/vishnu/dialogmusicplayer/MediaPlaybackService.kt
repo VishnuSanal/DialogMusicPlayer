@@ -52,7 +52,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.io.IOException
 
 class MediaPlaybackService :
     MediaBrowserServiceCompat(),
@@ -167,33 +166,46 @@ class MediaPlaybackService :
                 isPlayerReleased = false
                 mediaPlayer.setDataSource(this@MediaPlaybackService, uri)
                 mediaPlayer.setOnPreparedListener {
-                    if (!requestFocus()) return@setOnPreparedListener
+                    try {
+                        // Request audio focus for politeness (ducking / pause on
+                        // loss is handled by onAudioFocusChange), but never let a
+                        // denial block playback — the user explicitly opened this
+                        // file to play it.
+                        if (!requestFocus()) {
+                            Log.w(LOG_TAG, "Audio focus not granted; playing anyway")
+                        }
 
-                    // Promote this service to a started service so playback
-                    // survives the activity unbinding. (The old code targeted
-                    // the framework MediaBrowserService class by mistake.)
-                    startService(
-                        Intent(this@MediaPlaybackService, MediaPlaybackService::class.java),
-                    )
-                    mediaSession.isActive = true
-                    mediaPlayer.start()
+                        // Promote this service to a started service so playback
+                        // survives the activity unbinding.
+                        startService(
+                            Intent(this@MediaPlaybackService, MediaPlaybackService::class.java),
+                        )
+                        mediaSession.isActive = true
+                        mediaPlayer.start()
 
-                    setPlaybackState(PlaybackStateCompat.STATE_PLAYING, KEEP_SPEED)
+                        setPlaybackState(PlaybackStateCompat.STATE_PLAYING, KEEP_SPEED)
 
-                    audio = AudioUtils.getMetaData(
-                        this@MediaPlaybackService,
-                        mediaPlayer.duration.toString(),
-                        uri,
-                    )
-                    mediaSession.setMetadata(audio?.mediaMetadata)
+                        audio = AudioUtils.getMetaData(
+                            this@MediaPlaybackService,
+                            mediaPlayer.duration.toString(),
+                            uri,
+                        )
+                        mediaSession.setMetadata(audio?.mediaMetadata)
 
-                    progressHandler.removeCallbacks(progressRunnable)
-                    progressHandler.post(progressRunnable)
+                        progressHandler.removeCallbacks(progressRunnable)
+                        progressHandler.post(progressRunnable)
 
-                    startForeground(NOTIFICATION_ID, getNotification())
+                        startForeground(NOTIFICATION_ID, getNotification())
+                    } catch (e: Exception) {
+                        Log.e(LOG_TAG, "onPrepared() failed for $uri", e)
+                    }
+                }
+                mediaPlayer.setOnErrorListener { _, what, extra ->
+                    Log.e(LOG_TAG, "MediaPlayer error: what=$what extra=$extra")
+                    false
                 }
                 mediaPlayer.prepareAsync()
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 // Don't crash the whole service on an unreadable file.
                 Log.e(LOG_TAG, "onPlayFromUri() failed for $uri", e)
             }
@@ -281,6 +293,7 @@ class MediaPlaybackService :
                 .setOnAudioFocusChangeListener(this)
                 .setAudioAttributes(
                     AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
                         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                         .build(),
                 )

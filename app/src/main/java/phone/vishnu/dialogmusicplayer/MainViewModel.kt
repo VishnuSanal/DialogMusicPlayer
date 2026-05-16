@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 - 2023 Vishnu Sanal. T
+ * Copyright (C) 2021 - 2024 Vishnu Sanal. T
  *
  * This file is part of DialogMusicPlayer.
  *
@@ -20,16 +20,45 @@
 package phone.vishnu.dialogmusicplayer
 
 import android.app.Application
+import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = SaveItemRepository(application)
+
+    private val _uiState = MutableStateFlow(PlayerUiState())
+
+    /** The single source of truth the Compose UI observes. */
+    val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    fun onMetadataChanged(title: String, artist: String, albumArt: Bitmap?, durationMs: Long) {
+        _uiState.update {
+            it.copy(
+                title = title,
+                artist = artist,
+                albumArt = albumArt,
+                durationMs = durationMs,
+            )
+        }
+    }
+
+    fun onPlaybackStateChanged(playbackState: Int, positionMs: Long) {
+        _uiState.update { it.copy(playbackState = playbackState, positionMs = positionMs) }
+    }
+
+    fun onRepeatModeChanged(repeatMode: Int) {
+        _uiState.update { it.copy(repeatMode = repeatMode) }
+    }
 
     fun insert(saveItem: SaveItem) {
         viewModelScope.launch(Dispatchers.IO) {

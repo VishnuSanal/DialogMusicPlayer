@@ -27,7 +27,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.content.res.ColorStateList
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Build
@@ -36,48 +35,28 @@ import android.support.v4.media.MediaBrowserCompat
 import android.support.v4.media.MediaMetadataCompat
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.PlaybackStateCompat
-import android.text.TextUtils
-import android.text.method.ScrollingMovementMethod
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.getValue
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.content.IntentCompat
-import androidx.lifecycle.ViewModelProvider
-import com.google.android.material.slider.Slider
-import java.util.Locale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var viewModel: MainViewModel
+    private val viewModel: MainViewModel by viewModels()
 
     private var mediaBrowser: MediaBrowserCompat? = null
-
-    private lateinit var slider: Slider
-    private lateinit var playPauseButton: ImageView
-    private lateinit var repeatIV: ImageView
-    private lateinit var rewindIV: ImageView
-    private lateinit var seekIV: ImageView
-    private lateinit var albumArtIV: ImageView
-    private lateinit var fileNameTV: TextView
-    private lateinit var artistNameTV: TextView
-    private lateinit var progressTV: TextView
-    private lateinit var durationTV: TextView
-    private lateinit var playbackSpeedTV: TextView
-
-    private var isTimeReversed = false
-    private var totalDuration = 0
-    private var trackId = -1L
 
     // Guards against re-seeking to the saved position every time metadata is
     // re-delivered (e.g. on configuration change / re-registering the callback).
     private var lastResumedId = -1L
 
-    /** Convenience accessors so we stop repeating the verbose static lookup. */
     private val mediaController: MediaControllerCompat?
         get() = MediaControllerCompat.getMediaController(this)
 
@@ -90,47 +69,33 @@ class MainActivity : AppCompatActivity() {
             super.onMetadataChanged(metadata)
             metadata ?: return
 
-            trackId = metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
+            val id = metadata.getString(MediaMetadataCompat.METADATA_KEY_MEDIA_ID)
                 ?.toLongOrNull() ?: -1L
 
-            fileNameTV.text = metadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE)
-            artistNameTV.text = metadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST)
-            albumArtIV.setImageBitmap(
-                metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
+            viewModel.onMetadataChanged(
+                title = metadata.getText(MediaMetadataCompat.METADATA_KEY_DISPLAY_TITLE)
+                    ?.toString().orEmpty(),
+                artist = metadata.getText(MediaMetadataCompat.METADATA_KEY_ARTIST)
+                    ?.toString().orEmpty(),
+                albumArt = metadata.getBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART),
+                durationMs = metadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION),
             )
 
-            totalDuration = metadata.getLong(MediaMetadataCompat.METADATA_KEY_DURATION).toInt()
-            durationTV.text = getFormattedTime(totalDuration.toLong(), isTimeReversed)
-
-            if (totalDuration > 0) slider.valueTo = totalDuration.toFloat()
-
-            if (trackId != -1L && trackId != lastResumedId) {
-                lastResumedId = trackId
-                observeSavedPosition(trackId)
+            if (id != -1L && id != lastResumedId) {
+                lastResumedId = id
+                observeSavedPosition(id)
             }
         }
 
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
             super.onPlaybackStateChanged(state)
             state ?: return
+            viewModel.onPlaybackStateChanged(state.state, state.position)
+        }
 
-            val position = state.position
-            if (position in slider.valueFrom.toLong()..slider.valueTo.toLong()) {
-                slider.value = position.toFloat()
-            }
-
-            progressTV.text = getFormattedTime(position, isTimeReversed)
-
-            when (state.state) {
-                PlaybackStateCompat.STATE_PLAYING ->
-                    playPauseButton.setImageResource(R.drawable.ic_pause)
-
-                PlaybackStateCompat.STATE_PAUSED ->
-                    playPauseButton.setImageResource(R.drawable.ic_play)
-
-                PlaybackStateCompat.STATE_STOPPED ->
-                    playPauseButton.setImageResource(R.drawable.ic_replay)
-            }
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            super.onRepeatModeChanged(repeatMode)
+            viewModel.onRepeatModeChanged(repeatMode)
         }
 
         override fun onSessionDestroyed() {
@@ -142,13 +107,8 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
         FileUtils.clearApplicationData(applicationContext) // fix for an old mistake ;_;
-
-        initViews()
-
-        viewModel = ViewModelProvider(this)[MainViewModel::class.java]
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(killReceiver, IntentFilter(KILL_APP_KEY), RECEIVER_NOT_EXPORTED)
@@ -156,21 +116,46 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(killReceiver, IntentFilter(KILL_APP_KEY))
         }
 
-        requestPermissionsThenStart()
+        setContent {
+            DmpTheme {
+                val state by viewModel.uiState.collectAsStateWithLifecycle()
+                PlayerScreen(
+                    state = state,
+                    onPlayPause = ::togglePlayPause,
+                    onSeekTo = { transportControls?.seekTo(it) },
+                    onRewind = { seekBy(-SEEK_STEP_MS) },
+                    onForward = { seekBy(SEEK_STEP_MS) },
+                    onRepeat = ::cycleRepeatMode,
+                    onBackgroundTap = { moveTaskToBack(false) },
+                )
+            }
+        }
+
+        // Playback only needs the audio-read permission. POST_NOTIFICATIONS is
+        // optional (a nicer notification) and must NOT gate playback — so we
+        // start as soon as the essential permission is available and request
+        // anything still missing separately.
+        if (hasEssentialPermission()) initTasks(intent)
+        requestMissingPermissions()
     }
 
-    private fun requestPermissionsThenStart() {
-        val required = requiredPermissions()
+    /** The one permission without which the app genuinely cannot play a file. */
+    private fun essentialPermission(): String? {
+        return when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ->
+                Manifest.permission.READ_MEDIA_AUDIO
 
-        val missing = required.filter {
-            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
-        }
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ->
+                Manifest.permission.READ_EXTERNAL_STORAGE
 
-        if (missing.isEmpty()) {
-            initTasks(intent)
-        } else {
-            ActivityCompat.requestPermissions(this, missing.toTypedArray(), PERMISSION_REQUEST_CODE)
+            else -> null
         }
+    }
+
+    private fun hasEssentialPermission(): Boolean {
+        val permission = essentialPermission() ?: return true
+        return ContextCompat.checkSelfPermission(this, permission) ==
+            PackageManager.PERMISSION_GRANTED
     }
 
     private fun requiredPermissions(): List<String> {
@@ -182,6 +167,15 @@ class MainActivity : AppCompatActivity() {
                 listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
 
             else -> emptyList()
+        }
+    }
+
+    private fun requestMissingPermissions() {
+        val missing = requiredPermissions().filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, missing.toTypedArray(), PERMISSION_REQUEST_CODE)
         }
     }
 
@@ -225,32 +219,64 @@ class MainActivity : AppCompatActivity() {
 
         if (requestCode != PERMISSION_REQUEST_CODE) return
 
-        val allGranted = grantResults.isNotEmpty() &&
-            grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+        // Only the essential (audio) permission decides whether we can play —
+        // a denied POST_NOTIFICATIONS is fine and must not block playback.
+        if (hasEssentialPermission()) {
+            // Start playback if onCreate couldn't (permission was just granted).
+            if (mediaBrowser == null) initTasks(intent)
+            return
+        }
 
-        if (allGranted) {
-            initTasks(intent)
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (shouldShowRequestPermissionRationale(Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                Toast.makeText(
-                    this,
-                    "Storage permission denied\nPlease grant necessary permissions",
-                    Toast.LENGTH_LONG,
-                ).show()
-                requestPermissionsThenStart()
-            } else {
-                Toast.makeText(
-                    this,
-                    "Permission denied\nPlease grant permission from settings",
-                    Toast.LENGTH_LONG,
-                ).show()
-            }
+        val essential = essentialPermission() ?: return
+        if (ActivityCompat.shouldShowRequestPermissionRationale(this, essential)) {
+            Toast.makeText(
+                this,
+                "Audio permission denied\nPlease grant it so files can be played",
+                Toast.LENGTH_LONG,
+            ).show()
+            requestMissingPermissions()
+        } else {
+            Toast.makeText(
+                this,
+                "Audio permission denied\nPlease grant the permission from settings",
+                Toast.LENGTH_LONG,
+            ).show()
         }
     }
 
     override fun finish() {
         super.finishAndRemoveTask()
     }
+
+    // ---- Transport actions (invoked by the Composable) -------------------------
+
+    private fun togglePlayPause() {
+        when (mediaController?.playbackState?.state) {
+            PlaybackStateCompat.STATE_PLAYING -> transportControls?.pause()
+            PlaybackStateCompat.STATE_PAUSED -> transportControls?.play()
+            PlaybackStateCompat.STATE_STOPPED -> {
+                transportControls?.seekTo(0)
+                transportControls?.play()
+            }
+        }
+    }
+
+    private fun seekBy(deltaMs: Long) {
+        val position = mediaController?.playbackState?.position ?: return
+        transportControls?.seekTo(position + deltaMs)
+    }
+
+    private fun cycleRepeatMode() {
+        val next = when (mediaController?.repeatMode) {
+            PlaybackStateCompat.REPEAT_MODE_NONE -> PlaybackStateCompat.REPEAT_MODE_ONE
+            PlaybackStateCompat.REPEAT_MODE_ONE -> PlaybackStateCompat.REPEAT_MODE_ALL
+            else -> PlaybackStateCompat.REPEAT_MODE_NONE
+        }
+        transportControls?.setRepeatMode(next)
+        viewModel.onRepeatModeChanged(next)
+    }
+
+    // ---- Media browser plumbing ------------------------------------------------
 
     private fun initTasks(intent: Intent) {
         if (Intent.ACTION_VIEW != intent.action && Intent.ACTION_SEND != intent.action) {
@@ -290,12 +316,13 @@ class MainActivity : AppCompatActivity() {
             object : MediaBrowserCompat.ConnectionCallback() {
                 override fun onConnected() {
                     val browser = mediaBrowser ?: return
-                    val mediaController = MediaControllerCompat(this@MainActivity, browser.sessionToken)
-                    MediaControllerCompat.setMediaController(this@MainActivity, mediaController)
+                    val controller = MediaControllerCompat(this@MainActivity, browser.sessionToken)
+                    MediaControllerCompat.setMediaController(this@MainActivity, controller)
 
-                    buildTransportControls()
+                    controller.registerCallback(controllerCallback)
+                    viewModel.onRepeatModeChanged(controller.repeatMode)
 
-                    transportControls?.playFromUri(uri, null)
+                    controller.transportControls.playFromUri(uri, null)
                 }
 
                 override fun onConnectionSuspended() {
@@ -323,46 +350,6 @@ class MainActivity : AppCompatActivity() {
         controller.transportControls.setRepeatMode(controller.repeatMode)
     }
 
-    private fun buildTransportControls() {
-        playPauseButton.setOnClickListener {
-            when (mediaController?.playbackState?.state) {
-                PlaybackStateCompat.STATE_PLAYING -> {
-                    transportControls?.pause()
-                    playPauseButton.setImageResource(R.drawable.ic_play)
-                }
-
-                PlaybackStateCompat.STATE_PAUSED -> {
-                    transportControls?.play()
-                    playPauseButton.setImageResource(R.drawable.ic_pause)
-                }
-
-                PlaybackStateCompat.STATE_STOPPED -> {
-                    transportControls?.seekTo(0)
-                    transportControls?.play()
-                    playPauseButton.setImageResource(R.drawable.ic_pause)
-                }
-            }
-        }
-
-        slider.addOnChangeListener { _, value, fromUser ->
-            if (fromUser) transportControls?.seekTo(value.toLong())
-        }
-
-        rewindIV.setOnClickListener {
-            val position = mediaController?.playbackState?.position ?: return@setOnClickListener
-            transportControls?.seekTo(position - SEEK_STEP_MS)
-        }
-
-        seekIV.setOnClickListener {
-            val position = mediaController?.playbackState?.position ?: return@setOnClickListener
-            transportControls?.seekTo(position + SEEK_STEP_MS)
-        }
-
-        // Registered here so the very first (post-connection) callback is wired
-        // up; onResume/onStop take over for subsequent foreground transitions.
-        mediaController?.registerCallback(controllerCallback)
-    }
-
     private fun observeSavedPosition(id: Long) {
         viewModel.getSaveItem(id).observe(this) { saveItem ->
             val saveTime = saveItem.duration
@@ -370,124 +357,9 @@ class MainActivity : AppCompatActivity() {
                 transportControls?.seekTo(saveTime)
                 Toast.makeText(
                     this,
-                    "Resuming playback from ${getFormattedTime(saveTime, false)}",
+                    "Resuming playback from ${formatTime(saveTime)}",
                     Toast.LENGTH_SHORT,
                 ).show()
-            }
-        }
-    }
-
-    private fun initViews() {
-        slider = findViewById(R.id.slider)
-        playPauseButton = findViewById(R.id.playPauseButton)
-        fileNameTV = findViewById(R.id.fileNameTV)
-        artistNameTV = findViewById(R.id.artistNameTV)
-        progressTV = findViewById(R.id.progressTV)
-        durationTV = findViewById(R.id.durationTV)
-        repeatIV = findViewById(R.id.repeatButton)
-        rewindIV = findViewById(R.id.rewindButton)
-        seekIV = findViewById(R.id.seekButton)
-        albumArtIV = findViewById(R.id.albumArtIV)
-        playbackSpeedTV = findViewById(R.id.playbackSpeedButton)
-        initColors()
-        setTextViewScrollingBehaviour()
-        setListeners()
-    }
-
-    private fun initColors() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-
-        val colorAccent = ColorUtils.getAccentColor(this)
-        val colorAccentLight = ColorUtils.getAccentColorLight(this)
-
-        playPauseButton.setColorFilter(colorAccent)
-        rewindIV.setColorFilter(colorAccentLight)
-        seekIV.setColorFilter(colorAccentLight)
-
-        slider.thumbStrokeColor = ColorStateList.valueOf(colorAccent)
-        slider.trackActiveTintList = ColorStateList.valueOf(colorAccent)
-        slider.haloTintList = ColorStateList.valueOf(colorAccentLight)
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun setListeners() {
-        progressTV.setOnClickListener { isTimeReversed = !isTimeReversed }
-
-        slider.setLabelFormatter { value -> getFormattedTime(value.toLong(), isTimeReversed) }
-
-        playbackSpeedTV.setOnClickListener { cyclePlaybackSpeed() }
-
-        repeatIV.setOnClickListener { cycleRepeatMode() }
-
-        findViewById<View>(R.id.parentRelativeLayout).setOnTouchListener { _, event ->
-            val childLayout = findViewById<View>(R.id.childConstraintLayout)
-            val tappedOutsideContent = event.y < albumArtIV.y ||
-                (
-                    event.y < childLayout.y &&
-                        (event.x < albumArtIV.x || event.x > albumArtIV.x + albumArtIV.width)
-                    )
-
-            if (tappedOutsideContent) {
-                moveTaskToBack(false)
-                true
-            } else {
-                false
-            }
-        }
-    }
-
-    private fun cyclePlaybackSpeed() {
-        val speed = mediaController?.playbackState?.playbackSpeed ?: 1f
-
-        // Cycle 0.5 -> 0.75 -> 1 -> 1.25 -> 1.5 -> 2 -> 0.5 ...
-        val next = when (speed) {
-            0.5f -> 0.75f
-            0.75f -> 1f
-            1.0f -> 1.25f
-            1.25f -> 1.5f
-            1.5f -> 2.0f
-            2.0f -> 0.5f
-            else -> 1f
-        }
-
-        playbackSpeedTV.setText(speedLabelRes(next))
-        playbackSpeedTV.setTextColor(
-            if (next == 1f) {
-                ContextCompat.getColor(this, R.color.textColorLight)
-            } else {
-                ColorUtils.getAccentColor(this)
-            },
-        )
-        transportControls?.setPlaybackSpeed(next)
-    }
-
-    private fun speedLabelRes(speed: Float): Int = when (speed) {
-        0.5f -> R.string.zero_five_x
-        0.75f -> R.string.zero_seven_five_x
-        1.25f -> R.string.one_two_five_x
-        1.5f -> R.string.one_five_x
-        2.0f -> R.string.two_x
-        else -> R.string.one_x
-    }
-
-    private fun cycleRepeatMode() {
-        when (mediaController?.repeatMode) {
-            PlaybackStateCompat.REPEAT_MODE_NONE -> {
-                repeatIV.setImageResource(R.drawable.ic_repeat_one)
-                repeatIV.setColorFilter(ColorUtils.getAccentColor(this))
-                transportControls?.setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ONE)
-            }
-
-            PlaybackStateCompat.REPEAT_MODE_ONE -> {
-                repeatIV.setImageResource(R.drawable.ic_repeat)
-                repeatIV.setColorFilter(ColorUtils.getAccentColor(this))
-                transportControls?.setRepeatMode(PlaybackStateCompat.REPEAT_MODE_ALL)
-            }
-
-            PlaybackStateCompat.REPEAT_MODE_ALL -> {
-                repeatIV.setImageResource(R.drawable.ic_repeat)
-                repeatIV.setColorFilter(ContextCompat.getColor(this, R.color.textColorLight))
-                transportControls?.setRepeatMode(PlaybackStateCompat.REPEAT_MODE_NONE)
             }
         }
     }
@@ -502,28 +374,9 @@ class MainActivity : AppCompatActivity() {
         window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
 
-    private fun setTextViewScrollingBehaviour() {
-        for (textView in listOf(fileNameTV, artistNameTV)) {
-            textView.movementMethod = ScrollingMovementMethod()
-            textView.isSingleLine = true
-            textView.setHorizontallyScrolling(true)
-            textView.ellipsize = TextUtils.TruncateAt.MARQUEE
-            textView.marqueeRepeatLimit = -1
-            textView.isSelected = true
-            textView.setPadding(10, 0, 10, 0)
-        }
-    }
-
-    private fun getFormattedTime(millis: Long, reversed: Boolean): String {
-        if (reversed) return "-" + getFormattedTime(totalDuration - millis, false)
-
+    private fun formatTime(millis: Long): String {
         val totalSeconds = millis / 1000
-        return String.format(
-            Locale.getDefault(),
-            "%d:%02d",
-            totalSeconds / 60,
-            totalSeconds % 60,
-        )
+        return "%d:%02d".format(totalSeconds / 60, totalSeconds % 60)
     }
 
     private val killReceiver = object : BroadcastReceiver() {
