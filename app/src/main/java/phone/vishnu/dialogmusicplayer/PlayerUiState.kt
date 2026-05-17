@@ -34,6 +34,7 @@ data class PlayerUiState(
     val durationMs: Long = 0L,
     val playbackState: Int = PlaybackStateCompat.STATE_NONE,
     val repeatMode: Int = PlaybackStateCompat.REPEAT_MODE_NONE,
+    val playbackSpeed: Float = 1f,
 ) {
     val isPlaying: Boolean get() = playbackState == PlaybackStateCompat.STATE_PLAYING
 }

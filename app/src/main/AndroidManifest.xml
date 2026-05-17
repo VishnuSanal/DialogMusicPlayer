@@ -2,25 +2,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
 <!--
-    API     Android Version     Testing Status (emulator/real device)
-    21      5.0                                 E
-    22      5.1                                 E
-    23      6.0                                 E
-    24      7.0                                 E
-    25      7.1                                 *
-    26      8.0                                 *
-    27      8.1                                 *
-    28      9                                   *
-    29      10                                  *
-    30      11                                  *
-    31      12                                  *
-    32      12                                  *
-    33      13                                  *
-    34      14                                  R
-    35      15                                  *
-    36      16                                  *
-    36      16.1                                *
-    37      17                                  E
+	API     Android Version     Testing Status (emulator/real device)
+	21      5.0                                 E
+	22      5.1                                 E
+	23      6.0                                 E
+	24      7.0                                 E
+	25      7.1                                 *
+	26      8.0                                 *
+	27      8.1                                 *
+	28      9                                   *
+	29      10                                  *
+	30      11                                  *
+	31      12                                  *
+	32      12                                  *
+	33      13                                  *
+	34      14                                  R
+	35      15                                  *
+	36      16                                  *
+	36      16.1                                *
+	37      17                                  E
 -->
 
 	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"

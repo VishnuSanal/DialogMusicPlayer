@@ -44,11 +44,21 @@ object FileUtils {
         if (prefs.getBoolean(KEY_LEGACY_FILES_CLEARED, false)) return
 
         ioExecutor.execute {
-            runCatching {
-                context.filesDir.listFiles()?.forEach { it.deleteRecursively() }
-            }.onFailure { Log.w(TAG, "clearApplicationData() failed", it) }
+            // deleteRecursively() returns false on a failed/partial delete; only
+            // treat the cleanup as done when every entry was actually removed,
+            // otherwise it is retried on the next launch.
+            val cleared = runCatching {
+                context.filesDir.listFiles()
+                    ?.map { it.deleteRecursively() }
+                    ?.all { it }
+                    ?: true
+            }.onFailure {
+                Log.w(TAG, "clearApplicationData() failed", it)
+            }.getOrDefault(false)
 
-            prefs.edit().putBoolean(KEY_LEGACY_FILES_CLEARED, true).apply()
+            if (cleared) {
+                prefs.edit().putBoolean(KEY_LEGACY_FILES_CLEARED, true).apply()
+            }
         }
     }
 }

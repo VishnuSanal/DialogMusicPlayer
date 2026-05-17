@@ -23,6 +23,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -57,6 +58,10 @@ class MainActivity : AppCompatActivity() {
     // re-delivered (e.g. on configuration change / re-registering the callback).
     private var lastResumedId = -1L
 
+    // An intent whose playback is deferred because the essential audio
+    // permission is still missing; replayed once the permission is granted.
+    private var deferredIntent: Intent? = null
+
     private val mediaController: MediaControllerCompat?
         get() = MediaControllerCompat.getMediaController(this)
 
@@ -90,7 +95,7 @@ class MainActivity : AppCompatActivity() {
         override fun onPlaybackStateChanged(state: PlaybackStateCompat?) {
             super.onPlaybackStateChanged(state)
             state ?: return
-            viewModel.onPlaybackStateChanged(state.state, state.position)
+            viewModel.onPlaybackStateChanged(state.state, state.position, state.playbackSpeed)
         }
 
         override fun onRepeatModeChanged(repeatMode: Int) {
@@ -126,6 +131,7 @@ class MainActivity : AppCompatActivity() {
                     onRewind = { seekBy(-SEEK_STEP_MS) },
                     onForward = { seekBy(SEEK_STEP_MS) },
                     onRepeat = ::cycleRepeatMode,
+                    onCycleSpeed = ::cyclePlaybackSpeed,
                     onBackgroundTap = { moveTaskToBack(false) },
                 )
             }
@@ -134,8 +140,14 @@ class MainActivity : AppCompatActivity() {
         // Playback only needs the audio-read permission. POST_NOTIFICATIONS is
         // optional (a nicer notification) and must NOT gate playback — so we
         // start as soon as the essential permission is available and request
-        // anything still missing separately.
-        if (hasEssentialPermission()) initTasks(intent)
+        // anything still missing separately. A content:// URI delivered by
+        // ACTION_VIEW/SEND carries its own temporary read grant, so the file
+        // the user explicitly opened plays even without library-wide access.
+        if (hasEssentialPermission() || canPlayWithoutPermission(intent)) {
+            initTasks(intent)
+        } else {
+            deferredIntent = intent
+        }
         requestMissingPermissions()
     }
 
@@ -207,7 +219,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        initTasks(intent)
+        // singleTask: a new audio intent reuses this instance, so it must run
+        // through the same permission/content-grant gate as onCreate() rather
+        // than handing a file:// URI straight to a service that can't read it.
+        setIntent(intent)
+        if (hasEssentialPermission() || canPlayWithoutPermission(intent)) {
+            initTasks(intent)
+        } else {
+            deferredIntent = intent
+            requestMissingPermissions()
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -222,10 +243,17 @@ class MainActivity : AppCompatActivity() {
         // Only the essential (audio) permission decides whether we can play —
         // a denied POST_NOTIFICATIONS is fine and must not block playback.
         if (hasEssentialPermission()) {
-            // Start playback if onCreate couldn't (permission was just granted).
-            if (mediaBrowser == null) initTasks(intent)
+            // Replay the intent that onCreate()/onNewIntent() deferred for want
+            // of this permission. Nothing is deferred when playback already
+            // started, so a POST_NOTIFICATIONS-only result won't restart it.
+            deferredIntent?.let { initTasks(it) }
+            deferredIntent = null
             return
         }
+
+        // A content:// file may already be playing on its own temporary grant —
+        // don't nag about the denied library-wide permission in that case.
+        if (mediaBrowser != null) return
 
         val essential = essentialPermission() ?: return
         if (ActivityCompat.shouldShowRequestPermissionRationale(this, essential)) {
@@ -276,6 +304,16 @@ class MainActivity : AppCompatActivity() {
         viewModel.onRepeatModeChanged(next)
     }
 
+    /** Steps to the next speed in [PLAYBACK_SPEEDS], wrapping around. */
+    private fun cyclePlaybackSpeed() {
+        val current = mediaController?.playbackState?.playbackSpeed ?: 1f
+        val baseIndex = PLAYBACK_SPEEDS.indexOfFirst { it == current }
+            .let { if (it == -1) PLAYBACK_SPEEDS.indexOf(1f) else it }
+        transportControls?.setPlaybackSpeed(
+            PLAYBACK_SPEEDS[(baseIndex + 1) % PLAYBACK_SPEEDS.size],
+        )
+    }
+
     // ---- Media browser plumbing ------------------------------------------------
 
     private fun initTasks(intent: Intent) {
@@ -286,12 +324,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val uri: Uri? = if (Intent.ACTION_VIEW == intent.action) {
-            intent.data
-        } else {
-            IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-        }
-
+        val uri = resolveUri(intent)
         if (uri == null) {
             showFatalError(intent.action)
             return
@@ -302,6 +335,30 @@ class MainActivity : AppCompatActivity() {
         } else {
             playUri(uri)
         }
+    }
+
+    /** The audio URI carried by an ACTION_VIEW / ACTION_SEND intent, if any. */
+    private fun resolveUri(intent: Intent): Uri? {
+        return when (intent.action) {
+            Intent.ACTION_VIEW -> intent.data
+            Intent.ACTION_SEND ->
+                IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
+
+            else -> null
+        }
+    }
+
+    /**
+     * Whether [intent] can play without [essentialPermission]. True only for a
+     * `content://` URI carrying `FLAG_GRANT_READ_URI_PERMISSION` — that pairing
+     * is a temporary per-file read grant, enough to open that one file. A
+     * content URI *without* the flag (e.g. a bare MediaStore URI) still needs
+     * the library-wide media permission, and `file://` URIs never have a grant.
+     */
+    private fun canPlayWithoutPermission(intent: Intent): Boolean {
+        val isContentUri = resolveUri(intent)?.scheme == ContentResolver.SCHEME_CONTENT
+        val hasReadGrant = intent.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0
+        return isContentUri && hasReadGrant
     }
 
     private fun showFatalError(action: String?) {
@@ -391,5 +448,8 @@ class MainActivity : AppCompatActivity() {
 
         private const val PERMISSION_REQUEST_CODE = 0
         private const val SEEK_STEP_MS = 10_000L
+
+        /** Speed values the speed control cycles through, in order. */
+        private val PLAYBACK_SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
     }
 }

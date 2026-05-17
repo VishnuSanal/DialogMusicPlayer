@@ -99,9 +99,9 @@ app/src/main/java/phone/vishnu/dialogmusicplayer/SaveItemDatabase.kt
 app/src/main/java/phone/vishnu/dialogmusicplayer/SaveItemRepository.kt
 ```
 
-`AndroidManifest.xml` was intentionally **not** changed — Spotless wanted a
-whitespace-only reformat of a pre-existing comment block; out of scope for this
-pass.
+`AndroidManifest.xml` carries one **non-functional** addition — an API /
+testing-status comment block at the top of the file. No permissions,
+components or attributes were changed.
 
 ---
 
@@ -176,8 +176,10 @@ The whole UI layer was migrated from XML Views to Jetpack Compose.
 ### Removed
 - `activity_main.xml` and `layout-v23/activity_main.xml`.
 - `ColorUtils.kt`.
-- The (already `visibility="gone"`) playback-speed UI was not carried over — it
-  was dead UI in the XML version. The service still supports speed changes.
+
+> **Correction (see §9.2):** an earlier draft of these notes claimed the
+> playback-speed button was dead UI. It was not — `layout-v23/activity_main.xml`
+> showed it on API 23+. The Compose `SpeedButton` restores that control.
 
 ### Not verifiable here
 `assembleDebug` passes, but **the dialog window sizing, dynamic theming, marquee
@@ -224,3 +226,95 @@ listener. On the test device `requestAudioFocus()` returned
 
 Verified on device: file plays, position advances, metadata + embedded album
 art render in the Compose UI.
+
+---
+
+## 9. PR #68 review fixes
+
+Addressed the 11 automated review comments on
+[PR #68](https://github.com/VishnuSanal/DialogMusicPlayer/pull/68).
+
+### 9.1 Correctness
+- **`FileUtils.clearApplicationData`** marked the legacy cleanup "done" even when
+  `deleteRecursively()` failed (its `Boolean` result was ignored and the
+  preference was written unconditionally). Now the flag is persisted only when
+  every entry was actually deleted, so a failed/partial sweep is retried.
+- **`MediaPlaybackService` repeat-one** — an `isPlayingOnceInProgress` flag made
+  `REPEAT_MODE_ONE` replay only every *other* completion. Removed the flag;
+  repeat-one (and repeat-all) now replay on every completion.
+
+### 9.2 Restored playback-speed control
+The Compose migration dropped the speed button, but `layout-v23` exposed it on
+API 23+ and the service still handles `onSetPlaybackSpeed`. Restored:
+- `PlayerUiState.playbackSpeed`; `MainViewModel.onPlaybackStateChanged` now
+  carries speed (keeping the last real value while the session reports `0`).
+- `PlayerScreen` has a tappable `SpeedButton` (0.5×→0.75×→1×→1.25×→1.5×→2×),
+  shown only on API 23+ — exactly where the service honours it.
+- `MainActivity.cyclePlaybackSpeed()` drives it via `setPlaybackSpeed`.
+
+### 9.3 Accessibility
+- The remaining-time toggle used a raw `pointerInput`/`detectTapGestures`, which
+  is invisible to TalkBack and keyboard users. Switched to `Modifier.clickable`
+  with `Role.Button` and an `onClickLabel`. The new `SpeedButton` does the same.
+- Rewind/forward content descriptions moved to string resources.
+
+### 9.4 Permission gating for shared files
+`onCreate` gated *all* playback on the library-wide media permission. A
+`content://` URI from `ACTION_VIEW`/`SEND` carries its own temporary read grant,
+so a file the user explicitly opened can play without that permission. Playback
+now starts when the essential permission is held **or** the intent URI is a
+`content://` URI (`canPlayWithoutPermission`).
+
+### 9.5 Documentation
+- `CLAUDE.md` updated — the UI is Kotlin + Compose (not Java/XML), the playback
+  layer is Kotlin, `ColorUtils` is gone, and only the test stubs are Java.
+- The root `build.gradle` Java Spotless block was restored (the two Java test
+  stubs still need formatting/header coverage).
+- §4 and §7 above corrected (manifest comment block; speed button was not dead
+  UI).
+
+## 10. PR #68 review fixes — round 2 (Copilot)
+
+### 10.1 Progress ticker leaked on track completion
+`progressRunnable` reposts itself every 250 ms and was only cancelled on
+pause/stop. A track that finished *without* repeat kept the ticker waking the
+main thread until the service stopped. `onTrackCompleted()` now removes the
+callback; `onPlay()` restarts it on a repeat replay.
+
+### 10.2 Resume position lost on a save/shutdown race
+`savePosition()` launched the Room write in `serviceScope`, but `onStop()`
+calls `stopSelf()` and `onDestroy()` cancels that scope — the write could be
+cancelled before it landed. The save now runs under `NonCancellable` so it is
+detached from the scope and always completes.
+
+### 10.3 Metadata extraction blocked the main thread
+`AudioUtils.getMetaData()` (a `MediaMetadataRetriever` + MediaStore queries)
+ran synchronously inside the `onPrepared` callback on the service main looper.
+It now runs on `serviceScope` (IO); the notification shows immediately and
+metadata is published back on the main thread when extraction finishes.
+
+### 10.4 MediaStore ID lookup could abort metadata extraction
+For a shared `content://` file playable on a URI grant alone, the MediaStore
+ID query in `extractId()` can throw `SecurityException` and discard the
+title/artist/art already read. The lookup is now optional (`runCatching` →
+falls back to `-1`).
+
+### 10.5 Album-art fallback never rendered
+`AudioUtils` published the MediaStore cover as `METADATA_KEY_ALBUM_ART_URI`,
+but neither the Compose UI nor the notification loads a URI — both read the
+`METADATA_KEY_ALBUM_ART` bitmap. `AudioUtils` now resolves the cover into a
+bitmap (`loadAlbumArt`, off the main thread per §10.3) so the fallback art
+shows in both places. The dead drawable-URI fallback was dropped.
+
+### 10.6 `onNewIntent` bypassed the permission gate
+A `singleTask` re-launch with a new audio intent called `initTasks()`
+directly, so a `file://` URI could be handed to the service without the
+media permission. `onNewIntent()` now runs the same gate as `onCreate()` and
+defers playback (`deferredIntent`) until the permission is granted.
+
+### 10.7 Content-URI grant not actually verified
+`canPlayWithoutPermission` assumed every `content://` URI carried a read
+grant. It now also requires `FLAG_GRANT_READ_URI_PERMISSION`, so a bare
+MediaStore URI still goes through the permission flow. The permission-result
+handler replays `deferredIntent` (instead of the brittle `mediaBrowser == null`
+guard), so playback retries correctly after a late grant.

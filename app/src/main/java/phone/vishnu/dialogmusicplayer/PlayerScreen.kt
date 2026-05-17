@@ -19,10 +19,12 @@
 
 package phone.vishnu.dialogmusicplayer
 
+import android.os.Build
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,6 +57,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -80,6 +83,7 @@ fun PlayerScreen(
     onRewind: () -> Unit,
     onForward: () -> Unit,
     onRepeat: () -> Unit,
+    onCycleSpeed: () -> Unit,
     onBackgroundTap: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
@@ -101,6 +105,7 @@ fun PlayerScreen(
             onRewind = onRewind,
             onForward = onForward,
             onRepeat = onRepeat,
+            onCycleSpeed = onCycleSpeed,
         )
     }
 }
@@ -140,6 +145,7 @@ private fun BottomSheet(
     onRewind: () -> Unit,
     onForward: () -> Unit,
     onRepeat: () -> Unit,
+    onCycleSpeed: () -> Unit,
 ) {
     val textColor = colorResource(R.color.textColor)
     val textColorLight = colorResource(R.color.textColorLight)
@@ -207,9 +213,12 @@ private fun BottomSheet(
                 color = textColorLight,
                 fontFamily = poppins,
                 fontSize = 12.sp,
-                modifier = Modifier.pointerInput(Unit) {
-                    detectTapGestures { timeReversed = !timeReversed }
-                },
+                // clickable (not a raw pointerInput) so the toggle is exposed to
+                // TalkBack and keyboard users as an activatable control.
+                modifier = Modifier.clickable(
+                    onClickLabel = stringResource(R.string.toggle_remaining_time),
+                    role = Role.Button,
+                ) { timeReversed = !timeReversed },
             )
             Text(
                 text = formatTime(state.durationMs, timeReversed, state.durationMs),
@@ -225,6 +234,7 @@ private fun BottomSheet(
             onRewind = onRewind,
             onForward = onForward,
             onRepeat = onRepeat,
+            onCycleSpeed = onCycleSpeed,
         )
     }
 }
@@ -267,6 +277,7 @@ private fun ControlsRow(
     onRewind: () -> Unit,
     onForward: () -> Unit,
     onRepeat: () -> Unit,
+    onCycleSpeed: () -> Unit,
 ) {
     val accent = dmpAccentColor()
     val accentLight = dmpAccentColorLight()
@@ -304,11 +315,17 @@ private fun ControlsRow(
             onClick = onRepeat,
         )
 
+        // Variable playback speed needs PlaybackParams (API 23+); the service is
+        // a no-op below that, so the control is only offered where it works.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            SpeedButton(speed = state.playbackSpeed, onClick = onCycleSpeed)
+        }
+
         Spacer(modifier = Modifier.weight(1f))
 
         ControlButton(
             iconRes = R.drawable.ic_rewind,
-            contentDescription = "Rewind 10 seconds",
+            contentDescription = stringResource(R.string.rewind_button),
             tint = accentLight,
             buttonSize = 40.dp,
             iconSize = 28.dp,
@@ -317,7 +334,7 @@ private fun ControlsRow(
 
         ControlButton(
             iconRes = R.drawable.ic_seek,
-            contentDescription = "Forward 10 seconds",
+            contentDescription = stringResource(R.string.forward_button),
             tint = accentLight,
             buttonSize = 40.dp,
             iconSize = 28.dp,
@@ -357,6 +374,38 @@ private fun ControlButton(
             modifier = Modifier.size(iconSize),
         )
     }
+}
+
+/**
+ * Tappable playback-speed label (e.g. `1.5x`). Cycles to the next speed on tap;
+ * tinted with the accent colour whenever the speed is not 1x.
+ */
+@Composable
+private fun SpeedButton(speed: Float, onClick: () -> Unit) {
+    Text(
+        text = stringResource(speedLabelRes(speed)),
+        color = if (speed == 1f) colorResource(R.color.textColorLight) else dmpAccentColor(),
+        fontFamily = poppins,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(
+                onClickLabel = stringResource(R.string.playback_speed_toggle),
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    )
+}
+
+private fun speedLabelRes(speed: Float): Int = when (speed) {
+    0.5f -> R.string.zero_five_x
+    0.75f -> R.string.zero_seven_five_x
+    1.25f -> R.string.one_two_five_x
+    1.5f -> R.string.one_five_x
+    2f -> R.string.two_x
+    else -> R.string.one_x
 }
 
 /**

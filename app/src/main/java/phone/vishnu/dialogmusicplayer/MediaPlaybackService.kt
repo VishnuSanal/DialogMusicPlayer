@@ -49,9 +49,11 @@ import androidx.media.MediaBrowserServiceCompat
 import androidx.media.session.MediaButtonReceiver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MediaPlaybackService :
     MediaBrowserServiceCompat(),
@@ -61,7 +63,6 @@ class MediaPlaybackService :
     private lateinit var mediaPlayer: MediaPlayer
     private var audio: Audio? = null
 
-    private var isPlayingOnceInProgress = false
     private var wasPlayingWhenLosingAudioFocus = false
     private var isPlayerReleased = false
 
@@ -136,18 +137,17 @@ class MediaPlaybackService :
         setPlaybackState(PlaybackStateCompat.STATE_STOPPED, KEEP_SPEED)
         startForeground(NOTIFICATION_ID, getNotification())
 
-        when (mediaSession.controller.repeatMode) {
-            PlaybackStateCompat.REPEAT_MODE_ONE -> {
-                if (!isPlayingOnceInProgress) {
-                    isPlayingOnceInProgress = true
-                    if (mediaPlayer.currentPosition == mediaPlayer.duration) mediaPlayer.seekTo(0)
-                    mediaSession.controller.transportControls.play()
-                } else {
-                    isPlayingOnceInProgress = false
-                }
-            }
+        // Playback finished — stop the progress ticker. When we replay below it
+        // is restarted by onPlay(); without repeat it must not keep waking the
+        // main thread every 250 ms on a track that is no longer advancing.
+        progressHandler.removeCallbacks(progressRunnable)
 
-            PlaybackStateCompat.REPEAT_MODE_ALL -> {
+        // Single-track player: REPEAT_ONE and REPEAT_ALL both mean "replay this
+        // track". Replay on *every* completion — no every-other-time guard.
+        when (mediaSession.controller.repeatMode) {
+            PlaybackStateCompat.REPEAT_MODE_ONE,
+            PlaybackStateCompat.REPEAT_MODE_ALL,
+            -> {
                 if (mediaPlayer.currentPosition == mediaPlayer.duration) mediaPlayer.seekTo(0)
                 mediaSession.controller.transportControls.play()
             }
@@ -185,17 +185,30 @@ class MediaPlaybackService :
 
                         setPlaybackState(PlaybackStateCompat.STATE_PLAYING, KEEP_SPEED)
 
-                        audio = AudioUtils.getMetaData(
-                            this@MediaPlaybackService,
-                            mediaPlayer.duration.toString(),
-                            uri,
-                        )
-                        mediaSession.setMetadata(audio?.mediaMetadata)
-
                         progressHandler.removeCallbacks(progressRunnable)
                         progressHandler.post(progressRunnable)
 
+                        // Show the notification immediately so the foreground
+                        // deadline is met; title/art fill in once extracted.
                         startForeground(NOTIFICATION_ID, getNotification())
+
+                        // Metadata extraction runs MediaMetadataRetriever and
+                        // MediaStore queries that can block on large or remote
+                        // content:// files — keep it off the main thread and
+                        // publish the result back when it completes.
+                        val durationMs = mediaPlayer.duration.toString()
+                        serviceScope.launch {
+                            val metadata = AudioUtils.getMetaData(
+                                this@MediaPlaybackService,
+                                durationMs,
+                                uri,
+                            )
+                            withContext(Dispatchers.Main) {
+                                audio = metadata
+                                mediaSession.setMetadata(metadata.mediaMetadata)
+                                startForeground(NOTIFICATION_ID, getNotification())
+                            }
+                        }
                     } catch (e: Exception) {
                         Log.e(LOG_TAG, "onPrepared() failed for $uri", e)
                     }
@@ -326,7 +339,11 @@ class MediaPlaybackService :
         val currentPosition = mediaPlayer.currentPosition.toLong()
         val duration = mediaPlayer.duration.toLong()
 
-        serviceScope.launch {
+        // onStop() calls stopSelf() right after this, and onDestroy() cancels
+        // serviceScope — a plain launch could be cancelled before the write
+        // lands. NonCancellable detaches this one job from the scope so the
+        // resume position is always persisted.
+        serviceScope.launch(NonCancellable) {
             val repository = SaveItemRepository(application)
             if (currentPosition != duration) {
                 repository.insertSaveItem(SaveItem(id, currentPosition))

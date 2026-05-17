@@ -52,8 +52,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onPlaybackStateChanged(playbackState: Int, positionMs: Long) {
-        _uiState.update { it.copy(playbackState = playbackState, positionMs = positionMs) }
+    fun onPlaybackStateChanged(playbackState: Int, positionMs: Long, playbackSpeed: Float) {
+        _uiState.update {
+            it.copy(
+                playbackState = playbackState,
+                positionMs = positionMs,
+                // The session reports speed 0 before playback starts; keep the
+                // last real speed so the speed control never shows a "0x" label.
+                playbackSpeed = if (playbackSpeed > 0f) playbackSpeed else it.playbackSpeed,
+            )
+        }
     }
 
     fun onRepeatModeChanged(repeatMode: Int) {

@@ -21,6 +21,21 @@ plugins {
 }
 
 spotless {
+    java {
+
+        licenseHeaderFile 'spotless-header'
+
+        importOrder('android', 'androidx', 'com', 'java', 'phone', '')
+
+        target 'app/src/**/*.java'
+
+        googleJavaFormat('1.17.0').aosp()
+
+        removeUnusedImports()
+
+        delete rootProject.buildDir
+    }
+
     kotlin {
 
         licenseHeaderFile 'spotless-header'

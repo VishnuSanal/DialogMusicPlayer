@@ -19,9 +19,9 @@
 
 package phone.vishnu.dialogmusicplayer
 
-import android.content.ContentResolver
 import android.content.ContentUris
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadata
 import android.media.MediaMetadataRetriever
@@ -31,7 +31,6 @@ import android.os.Build
 import android.provider.MediaStore
 import android.support.v4.media.MediaMetadataCompat
 import android.util.Log
-import androidx.annotation.AnyRes
 import java.net.URLDecoder
 import java.util.concurrent.atomic.AtomicReference
 
@@ -69,10 +68,6 @@ object AudioUtils {
                 .putString(MediaMetadata.METADATA_KEY_TITLE, name)
                 .putString(MediaMetadata.METADATA_KEY_ARTIST, UNKNOWN_ARTIST)
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
-                .putString(
-                    MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
-                    getUriToDrawable(context, R.drawable.icon_fg),
-                )
                 .build(),
             duration = duration.toLong(),
             uri = uri,
@@ -106,16 +101,16 @@ object AudioUtils {
                 .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
 
             val picture = retriever.embeddedPicture
-            if (picture != null) {
-                builder.putBitmap(
-                    MediaMetadata.METADATA_KEY_ALBUM_ART,
-                    BitmapFactory.decodeByteArray(picture, 0, picture.size),
-                )
-            } else if (id != -1L) {
-                builder.putString(
-                    MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
-                    "content://media/external/audio/media/$id/albumart",
-                )
+            val albumArt = if (picture != null) {
+                BitmapFactory.decodeByteArray(picture, 0, picture.size)
+            } else {
+                // Fall back to the MediaStore cover art. Resolve it to a bitmap
+                // here (rather than handing the UI/notification a content URI
+                // they don't load) so the fallback art actually renders.
+                loadAlbumArt(context, id)
+            }
+            if (albumArt != null) {
+                builder.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, albumArt)
             }
 
             return Audio(id, builder.build(), duration.toLong(), uri)
@@ -128,17 +123,25 @@ object AudioUtils {
     }
 
     private fun extractId(context: Context, duration: String, uri: Uri): Long {
-        context.applicationContext.contentResolver.query(
-            audioCollectionUri(),
-            arrayOf(MediaStore.Audio.Media._ID),
-            "${MediaStore.Audio.Media.DURATION} = ?",
-            arrayOf(duration),
-            null,
-        )?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-            if (cursor.moveToNext()) return cursor.getLong(idColumn)
+        // A shared content:// file may be playable on a temporary URI grant
+        // alone, without READ_MEDIA_AUDIO. The MediaStore-wide query below then
+        // throws a SecurityException — treat the ID as optional (fall back to
+        // -1) so the title/artist/art already read from the URI aren't lost.
+        return runCatching {
+            context.applicationContext.contentResolver.query(
+                audioCollectionUri(),
+                arrayOf(MediaStore.Audio.Media._ID),
+                "${MediaStore.Audio.Media.DURATION} = ?",
+                arrayOf(duration),
+                null,
+            )?.use { cursor ->
+                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                if (cursor.moveToNext()) cursor.getLong(idColumn) else -1L
+            } ?: -1L
+        }.getOrElse {
+            Log.w(TAG, "extractId() failed for $uri", it)
+            -1L
         }
-        return -1
     }
 
     private fun fetchMetadata(context: Context, duration: String, uri: Uri?): Audio? {
@@ -176,19 +179,20 @@ object AudioUtils {
                 var artist = cursor.getString(artistColumn)
                 if (artist.isNullOrBlank() || artist == "<unknown>") artist = UNKNOWN_ARTIST
 
+                val builder = MediaMetadataCompat.Builder()
+                    .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, id.toString())
+                    .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
+                    .putString(MediaMetadata.METADATA_KEY_TITLE, name)
+                    .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
+
+                loadAlbumArt(context, id)?.let {
+                    builder.putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, it)
+                }
+
                 return Audio(
                     id,
-                    MediaMetadataCompat.Builder()
-                        .putString(MediaMetadata.METADATA_KEY_MEDIA_ID, id.toString())
-                        .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, name)
-                        .putString(MediaMetadata.METADATA_KEY_TITLE, name)
-                        .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
-                        .putLong(MediaMetadata.METADATA_KEY_DURATION, duration.toLong())
-                        .putString(
-                            MediaMetadata.METADATA_KEY_ALBUM_ART_URI,
-                            "content://media/external/audio/media/$id/albumart",
-                        )
-                        .build(),
+                    builder.build(),
                     cursor.getInt(durationColumn).toLong(),
                     contentUri,
                 )
@@ -224,13 +228,22 @@ object AudioUtils {
         return UNKNOWN_TITLE
     }
 
-    private fun getUriToDrawable(context: Context, @AnyRes drawableId: Int): String {
-        return ContentResolver.SCHEME_ANDROID_RESOURCE +
-            "://" +
-            context.resources.getResourcePackageName(drawableId) +
-            '/' +
-            context.resources.getResourceTypeName(drawableId) +
-            '/' +
-            context.resources.getResourceEntryName(drawableId)
+    /**
+     * Resolves the MediaStore cover art for [id] into a bitmap — the fallback
+     * when a track carries no embedded art. Returns null when the track is not
+     * in MediaStore ([id] is -1) or its art cannot be read. Touches the content
+     * resolver, so it must be called off the main thread.
+     */
+    private fun loadAlbumArt(context: Context, id: Long): Bitmap? {
+        if (id == -1L) return null
+        return runCatching {
+            val artUri = Uri.parse("content://media/external/audio/media/$id/albumart")
+            context.applicationContext.contentResolver.openInputStream(artUri)?.use {
+                BitmapFactory.decodeStream(it)
+            }
+        }.getOrElse {
+            Log.w(TAG, "loadAlbumArt() failed for id=$id", it)
+            null
+        }
     }
 }
