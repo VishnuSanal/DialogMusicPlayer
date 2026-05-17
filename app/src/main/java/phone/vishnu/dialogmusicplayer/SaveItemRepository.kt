@@ -21,15 +21,11 @@ package phone.vishnu.dialogmusicplayer
 
 import android.app.Application
 
-class SaveItemRepository(application: Application?) {
+class SaveItemRepository(application: Application) {
 
-    private val saveItemDao: SaveItemDao
+    private val saveItemDao: SaveItemDao = SaveItemDatabase.getInstance(application).saveItemDao()
 
-    init {
-        saveItemDao = SaveItemDatabase.getInstance(application!!).saveItemDao()
-    }
-
-    suspend fun getSaveItem(id: Long): SaveItem {
+    suspend fun getSaveItem(id: Long): SaveItem? {
         return saveItemDao.getSaveItem(id)
     }
 

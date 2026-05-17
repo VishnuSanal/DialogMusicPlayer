@@ -40,10 +40,10 @@ abstract class SaveItemDatabase : RoomDatabase() {
         fun getInstance(context: Context): SaveItemDatabase {
             return instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
-                    context,
+                    context.applicationContext,
                     SaveItemDatabase::class.java,
                     "dmp_save_database",
-                ).build()
+                ).build().also { instance = it }
             }
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 - 2023 Vishnu Sanal. T
+ * Copyright (C) 2021 - 2024 Vishnu Sanal. T
  *
  * This file is part of DialogMusicPlayer.
  *
@@ -20,43 +20,73 @@
 package phone.vishnu.dialogmusicplayer
 
 import android.app.Application
+import android.graphics.Bitmap
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
-    var repository: SaveItemRepository? = null
+    private val repository = SaveItemRepository(application)
 
-    init {
-        this.repository = SaveItemRepository(application)
+    private val _uiState = MutableStateFlow(PlayerUiState())
+
+    /** The single source of truth the Compose UI observes. */
+    val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    fun onMetadataChanged(title: String, artist: String, albumArt: Bitmap?, durationMs: Long) {
+        _uiState.update {
+            it.copy(
+                title = title,
+                artist = artist,
+                albumArt = albumArt,
+                durationMs = durationMs,
+            )
+        }
+    }
+
+    fun onPlaybackStateChanged(playbackState: Int, positionMs: Long, playbackSpeed: Float) {
+        _uiState.update {
+            it.copy(
+                playbackState = playbackState,
+                positionMs = positionMs,
+                // The session reports speed 0 before playback starts; keep the
+                // last real speed so the speed control never shows a "0x" label.
+                playbackSpeed = if (playbackSpeed > 0f) playbackSpeed else it.playbackSpeed,
+            )
+        }
+    }
+
+    fun onRepeatModeChanged(repeatMode: Int) {
+        _uiState.update { it.copy(repeatMode = repeatMode) }
     }
 
     fun insert(saveItem: SaveItem) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository?.insertSaveItem(saveItem)
+            repository.insertSaveItem(saveItem)
         }
     }
 
     fun delete(saveItem: SaveItem) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository?.deleteSaveItem(saveItem)
+            repository.deleteSaveItem(saveItem)
         }
     }
 
-    fun getSaveItem(id: Long): MutableLiveData<SaveItem> {
-        val mutableLiveData: MutableLiveData<SaveItem> = MutableLiveData(SaveItem(id, 0))
+    fun getSaveItem(id: Long): LiveData<SaveItem> {
+        val liveData = MutableLiveData(SaveItem(id, 0))
 
         viewModelScope.launch(Dispatchers.IO) {
-            val saveItem = repository?.getSaveItem(id)
-
-            if (saveItem != null) {
-                mutableLiveData.postValue(saveItem)
-            }
+            repository.getSaveItem(id)?.let { liveData.postValue(it) }
         }
 
-        return mutableLiveData
+        return liveData
     }
 }
